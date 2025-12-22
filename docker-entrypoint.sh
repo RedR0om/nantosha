@@ -28,7 +28,16 @@ php artisan storage:link || echo "Storage link already exists or failed"
 # Set proper permissions
 chmod -R 755 storage bootstrap/cache || true
 
-# Start the application
+# Ensure storage/logs is writable
+mkdir -p storage/logs
+chmod -R 777 storage/logs || true
+
+# Start the application with error output
 echo "Starting Laravel server on port ${PORT:-8080}..."
-exec php artisan serve --host=0.0.0.0 --port=${PORT:-8080}
+echo "APP_DEBUG=${APP_DEBUG:-false}"
+echo "DB_CONNECTION=${DB_CONNECTION:-not set}"
+echo "Checking database connection..."
+php artisan db:show || echo "Database connection check failed"
+
+exec php artisan serve --host=0.0.0.0 --port=${PORT:-8080} 2>&1
 
