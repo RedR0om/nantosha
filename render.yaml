@@ -1,0 +1,40 @@
+services:
+  - type: web
+    name: nantosha
+    env: php
+    region: oregon
+    plan: free
+    buildCommand: |
+      composer install --no-dev --optimize-autoloader --no-interaction &&
+      npm ci &&
+      npm run build &&
+      php artisan key:generate --force &&
+      php artisan migrate --force &&
+      php artisan config:cache &&
+      php artisan route:cache &&
+      php artisan view:cache &&
+      php artisan storage:link
+    startCommand: php artisan serve --host=0.0.0.0 --port=$PORT
+    healthCheckPath: /
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: false
+      - key: LOG_LEVEL
+        value: error
+      - key: DB_CONNECTION
+        value: pgsql
+      - key: SESSION_DRIVER
+        value: database
+      - key: CACHE_STORE
+        value: database
+      - key: QUEUE_CONNECTION
+        value: database
+      # Add these in Render dashboard after creating PostgreSQL database:
+      # DB_URL (from Render PostgreSQL dashboard - recommended)
+      # OR individual variables:
+      # DB_HOST, DB_PORT, DB_DATABASE, DB_USERNAME, DB_PASSWORD
+      # CLOUDINARY_URL
+      # APP_URL (will be auto-set by Render, but you can override)
+
