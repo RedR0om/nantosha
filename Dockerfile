@@ -1,5 +1,8 @@
 FROM php:8.2-cli
 
+# Install Node.js from NodeSource
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
     git \
@@ -8,10 +11,10 @@ RUN apt-get update && apt-get install -y \
     libonig-dev \
     libxml2-dev \
     libzip-dev \
+    libpq-dev \
     zip \
     unzip \
     nodejs \
-    npm \
     && docker-php-ext-install pdo pdo_mysql pdo_pgsql mbstring exif pcntl bcmath gd zip \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
