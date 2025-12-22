@@ -35,6 +35,29 @@ class CarouselController extends Controller
 
     public function store(Request $request)
     {
+        // Check PHP upload limits first
+        $maxUploadSize = min(
+            (int)ini_get('upload_max_filesize') * 1024 * 1024,
+            (int)ini_get('post_max_size') * 1024 * 1024
+        );
+        
+        \Log::info('PHP upload limits', [
+            'upload_max_filesize' => ini_get('upload_max_filesize'),
+            'post_max_size' => ini_get('post_max_size'),
+            'max_file_uploads' => ini_get('max_file_uploads'),
+            'calculated_max' => $maxUploadSize,
+            'content_length' => $request->header('Content-Length'),
+        ]);
+
+        // Check if request is too large
+        if ($request->header('Content-Length') && (int)$request->header('Content-Length') > $maxUploadSize) {
+            \Log::error('Request exceeds PHP upload limits', [
+                'content_length' => $request->header('Content-Length'),
+                'max_upload_size' => $maxUploadSize,
+            ]);
+            return back()->withErrors(['video' => 'File size exceeds server limit. Maximum allowed: ' . ini_get('upload_max_filesize')]);
+        }
+
         $validated = $request->validate([
             'title' => 'nullable|string|max:255',
             'subtitle' => 'nullable|string',
@@ -58,7 +81,26 @@ class CarouselController extends Controller
             $validated['image'] = null;
             // Validate video is provided
             if (!$request->hasFile('video')) {
+                // Check if file was uploaded but failed validation
+                if ($request->has('video')) {
+                    \Log::warning('Video field present but not a file', [
+                        'video_value' => $request->input('video'),
+                    ]);
+                    return back()->withErrors(['video' => 'Video file upload failed. Please check file size (max 50MB) and format (MP4, MOV, AVI, WMV, FLV, WebM).']);
+                }
                 return back()->withErrors(['video' => 'Video is required when media type is video.']);
+            }
+            
+            // Additional validation for video file
+            $videoFile = $request->file('video');
+            if (!$videoFile->isValid()) {
+                $errorMessage = $videoFile->getErrorMessage();
+                \Log::error('Video file validation failed', [
+                    'error_code' => $videoFile->getError(),
+                    'error_message' => $errorMessage,
+                    'file_size' => $videoFile->getSize(),
+                ]);
+                return back()->withErrors(['video' => 'Video file is invalid: ' . $errorMessage]);
             }
         }
 
@@ -82,14 +124,26 @@ class CarouselController extends Controller
         // Handle video upload to Cloudinary
         if ($request->hasFile('video') && $validated['media_type'] === 'video') {
             try {
+                $videoFile = $request->file('video');
+                
+                // Check if file was actually uploaded
+                if (!$videoFile->isValid()) {
+                    \Log::error('Video file is not valid', [
+                        'error' => $videoFile->getError(),
+                        'error_message' => $videoFile->getErrorMessage(),
+                    ]);
+                    return back()->withErrors(['video' => 'Video file is not valid: ' . $videoFile->getErrorMessage()]);
+                }
+                
                 \Log::info('Starting video upload to Cloudinary', [
-                    'filename' => $request->file('video')->getClientOriginalName(),
-                    'size' => $request->file('video')->getSize(),
-                    'mime' => $request->file('video')->getMimeType(),
+                    'filename' => $videoFile->getClientOriginalName(),
+                    'size' => $videoFile->getSize(),
+                    'mime' => $videoFile->getMimeType(),
+                    'real_path' => $videoFile->getRealPath(),
                 ]);
                 
                 $uploadResult = $this->cloudinaryService->uploadVideo(
-                    $request->file('video'),
+                    $videoFile,
                     'carousel'
                 );
                 
@@ -103,6 +157,7 @@ class CarouselController extends Controller
                 \Log::error('Video upload failed: ' . $e->getMessage(), [
                     'exception' => $e,
                     'file' => $request->file('video')?->getClientOriginalName(),
+                    'file_size' => $request->file('video')?->getSize(),
                     'trace' => $e->getTraceAsString(),
                 ]);
                 return back()->withErrors(['video' => 'Failed to upload video: ' . $e->getMessage()]);

@@ -38,6 +38,16 @@ RUN npm ci && npm run build
 COPY docker-entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
+# Configure PHP for large file uploads
+RUN { \
+    echo 'upload_max_filesize=50M'; \
+    echo 'post_max_size=50M'; \
+    echo 'max_execution_time=300'; \
+    echo 'max_input_time=300'; \
+    echo 'memory_limit=256M'; \
+    echo 'max_file_uploads=20'; \
+    } > /usr/local/etc/php/conf.d/uploads.ini
+
 # Set permissions
 RUN chmod -R 755 storage bootstrap/cache
 

@@ -6,7 +6,7 @@ use App\Http\Controllers\CartController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\BlogController;
 use App\Http\Controllers\HowToOrderController;
-use App\Http\Controllers\FaqController;
+use App\Http\Controllers\FAQController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\Admin\AdminProductController;
 use App\Http\Controllers\Admin\InventoryController;
@@ -44,7 +44,7 @@ Route::get('/blog/{slug}', [BlogController::class, 'show'])->name('blog.show');
 
 // Information Pages
 Route::get('/how-to-order', [HowToOrderController::class, 'index'])->name('how-to-order');
-Route::get('/faq', [FaqController::class, 'index'])->name('faq');
+Route::get('/faq', [FAQController::class, 'index'])->name('faq');
 Route::get('/contact', [ContactController::class, 'index'])->name('contact');
 Route::post('/contact', [ContactController::class, 'store'])->name('contact.store');
 

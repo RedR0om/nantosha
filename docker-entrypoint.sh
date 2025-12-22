@@ -16,6 +16,14 @@ fi
 echo "Running migrations..."
 php artisan migrate --force || echo "Migration failed, continuing..."
 
+# Run seeders (only if SEED_DATABASE is true or not set, to allow skipping in production if needed)
+if [ "${SEED_DATABASE:-true}" = "true" ]; then
+    echo "Running database seeders..."
+    php artisan db:seed --force || echo "Seeding failed, continuing..."
+else
+    echo "Skipping database seeding (SEED_DATABASE=false)"
+fi
+
 # Cache configuration (only if all env vars are set)
 echo "Caching configuration..."
 php artisan config:cache || echo "Config cache failed, using live config"

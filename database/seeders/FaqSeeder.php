@@ -51,7 +51,10 @@ class FaqSeeder extends Seeder
         ];
 
         foreach ($faqs as $faq) {
-            Faq::create($faq);
+            Faq::firstOrCreate(
+                ['question' => $faq['question']],
+                $faq
+            );
         }
     }
 }

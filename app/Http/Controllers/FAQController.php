@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Faq;
 use Inertia\Inertia;
 
-class FaqController extends Controller
+class FAQController extends Controller
 {
     public function index()
     {

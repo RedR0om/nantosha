@@ -15,201 +15,136 @@ class ProductSeeder extends Seeder
      */
     public function run(): void
     {
-        // Create Categories
-        $categories = [
-            ['name' => 'Vitamins & Supplements', 'slug' => 'vitamins-supplements'],
-            ['name' => 'Protein & Fitness', 'slug' => 'protein-fitness'],
-            ['name' => 'Herbs & Botanicals', 'slug' => 'herbs-botanicals'],
-            ['name' => 'Digestive Health', 'slug' => 'digestive-health'],
-            ['name' => 'Immune Support', 'slug' => 'immune-support'],
-        ];
-
-        foreach ($categories as $category) {
-            Category::create($category);
+        // Note: Categories and Brands should be seeded separately via CategorySeeder and BrandSeeder
+        // This seeder assumes they already exist, but we'll verify they exist before creating products
+        
+        // Verify required categories and brands exist
+        $ivermectinCategory = Category::where('slug', 'ivermectin-products')->first();
+        $nantoshaBrand = Brand::where('slug', 'nantosha-pharmaceuticals')->first();
+        $medpharmBrand = Brand::where('slug', 'medpharm-japan')->first();
+        
+        if (!$ivermectinCategory || !$nantoshaBrand || !$medpharmBrand) {
+            $this->command->warn('Required categories or brands not found. Please run CategorySeeder and BrandSeeder first.');
+            return;
         }
 
-        // Create Brands
-        $brands = [
-            ['name' => 'Calocurb', 'slug' => 'calocurb'],
-            ['name' => 'Designs for Health', 'slug' => 'designs-for-health'],
-            ['name' => 'Thorne', 'slug' => 'thorne'],
-            ['name' => 'Klean Athlete', 'slug' => 'klean-athlete'],
-            ['name' => 'Inwell Biosciences', 'slug' => 'inwell-biosciences'],
-            ['name' => 'Integrative Therapeutics', 'slug' => 'integrative-therapeutics'],
-            ['name' => 'Infiniwell', 'slug' => 'infiniwell'],
-            ['name' => 'Viviscal', 'slug' => 'viviscal'],
-        ];
-
-        foreach ($brands as $brand) {
-            Brand::create($brand);
-        }
-
-        // Create Products
+        // Create Products (Ivermectin capsules with JPY pricing)
         $products = [
             [
-                'name' => 'Calocurb Amarasate Appetite Control',
-                'slug' => 'calocurb-amarasate-appetite-control',
-                'brand_id' => Brand::where('slug', 'calocurb')->first()->id,
-                'category_id' => Category::where('slug', 'vitamins-supplements')->first()->id,
-                'price' => 89.99,
-                'sale_price' => null,
-                'sku' => 'CAL-001',
-                'stock_quantity' => 50,
-                'in_stock' => true,
-                'description' => 'Natural appetite control supplement with Amarasate extract.',
-                'short_description' => 'Support healthy appetite control naturally.',
-                'is_best_seller' => true,
-                'is_new_arrival' => false,
-                'is_customer_favorite' => false,
-            ],
-            [
-                'name' => 'Twice Daily Multi',
-                'slug' => 'twice-daily-multi',
-                'brand_id' => Brand::where('slug', 'designs-for-health')->first()->id,
-                'category_id' => Category::where('slug', 'vitamins-supplements')->first()->id,
-                'price' => 32.25,
-                'sale_price' => null,
-                'sku' => 'DFH-001',
+                'name' => 'Ivermectin 12mg Capsules (30 count)',
+                'slug' => 'ivermectin-12mg-capsules-30',
+                'brand_id' => $nantoshaBrand->id,
+                'category_id' => $ivermectinCategory->id,
+                'price' => 15000, // JPY
+                'sale_price' => 13500, // JPY
+                'price_per_capsule' => 450, // JPY
+                'price_per_mg' => 37.5, // JPY per mg
+                'sku' => 'IVM-12MG-30',
                 'stock_quantity' => 100,
                 'in_stock' => true,
-                'description' => 'Comprehensive multivitamin formula for daily nutritional support.',
-                'short_description' => 'Complete daily multivitamin support.',
+                'description' => 'Genuine Ivermectin 12mg capsules, 30 count. Verified by Japanese research institutions. Each capsule contains 12mg of Ivermectin, manufactured according to strict quality standards.',
+                'short_description' => 'Genuine Ivermectin 12mg capsules - 30 count. Verified by Japanese research institutions.',
+                'ingredients' => "Ivermectin: 12mg\nInactive Ingredients: Microcrystalline Cellulose, Magnesium Stearate, Gelatin Capsule",
+                'directions' => 'Take as directed by your healthcare professional. For Strongyloidiasis: Typically 200 mcg/kg body weight as a single dose. For Scabies: Typically 200 mcg/kg body weight, may require a second dose after 1-2 weeks. Consult your doctor for proper dosage.',
+                'warnings' => 'This product is not intended for pregnant or nursing women or by persons under 18. Consult your healthcare professional prior to use if you have or suspect a medical condition or are taking prescription drugs. Discontinue use and seek advice of a doctor if any adverse reactions occur. The Japanese MHLW only approves Ivermectin for two diseases: Strongyloidiasis and Scabies. Resale or transfer to third parties is strictly prohibited.',
+                'country_of_origin' => 'Japan',
+                'manufacturer' => 'Nantosha Pharmaceuticals Co., Ltd.',
+                'supplement_facts' => 'Each capsule contains: Ivermectin 12mg. Manufactured in Japan under strict quality control standards.',
                 'is_best_seller' => true,
-                'is_new_arrival' => false,
-                'is_customer_favorite' => false,
-            ],
-            [
-                'name' => 'Zinc Picolinate 30 mg',
-                'slug' => 'zinc-picolinate-30mg',
-                'brand_id' => Brand::where('slug', 'thorne')->first()->id,
-                'category_id' => Category::where('slug', 'immune-support')->first()->id,
-                'price' => 19.00,
-                'sale_price' => null,
-                'sku' => 'THR-001',
-                'stock_quantity' => 75,
-                'in_stock' => true,
-                'description' => 'Highly absorbable zinc supplement for immune support.',
-                'short_description' => 'Premium zinc for immune health.',
-                'is_best_seller' => true,
-                'is_new_arrival' => false,
-                'is_customer_favorite' => false,
-            ],
-            [
-                'name' => 'Klean Ashwagandha',
-                'slug' => 'klean-ashwagandha',
-                'brand_id' => Brand::where('slug', 'klean-athlete')->first()->id,
-                'category_id' => Category::where('slug', 'herbs-botanicals')->first()->id,
-                'price' => 24.35,
-                'sale_price' => null,
-                'sku' => 'KLE-001',
-                'stock_quantity' => 60,
-                'in_stock' => true,
-                'description' => 'Adaptogenic herb for stress support and energy balance.',
-                'short_description' => 'Natural stress support supplement.',
-                'is_best_seller' => true,
-                'is_new_arrival' => false,
-                'is_customer_favorite' => false,
-            ],
-            [
-                'name' => 'D3 & K2',
-                'slug' => 'd3-k2',
-                'brand_id' => Brand::where('slug', 'inwell-biosciences')->first()->id,
-                'category_id' => Category::where('slug', 'vitamins-supplements')->first()->id,
-                'price' => 34.99,
-                'sale_price' => null,
-                'sku' => 'INW-001',
-                'stock_quantity' => 80,
-                'in_stock' => true,
-                'description' => 'Essential vitamins D3 and K2 for bone and cardiovascular health.',
-                'short_description' => 'Bone and heart health support.',
-                'is_best_seller' => true,
-                'is_new_arrival' => false,
-                'is_customer_favorite' => false,
-            ],
-            [
-                'name' => 'Fiber Formula',
-                'slug' => 'fiber-formula',
-                'brand_id' => Brand::where('slug', 'integrative-therapeutics')->first()->id,
-                'category_id' => Category::where('slug', 'digestive-health')->first()->id,
-                'price' => 14.50,
-                'sale_price' => null,
-                'sku' => 'INT-001',
-                'stock_quantity' => 90,
-                'in_stock' => true,
-                'description' => 'Comprehensive fiber supplement for digestive health.',
-                'short_description' => 'Support healthy digestion.',
-                'is_best_seller' => true,
-                'is_new_arrival' => false,
-                'is_customer_favorite' => false,
-            ],
-            [
-                'name' => 'Probiotic Supreme',
-                'slug' => 'probiotic-supreme',
-                'brand_id' => Brand::where('slug', 'designs-for-health')->first()->id,
-                'category_id' => Category::where('slug', 'digestive-health')->first()->id,
-                'price' => 91.00,
-                'sale_price' => null,
-                'sku' => 'DFH-002',
-                'stock_quantity' => 40,
-                'in_stock' => true,
-                'description' => 'Advanced probiotic formula with multiple beneficial strains.',
-                'short_description' => 'Premium probiotic support.',
-                'is_best_seller' => true,
-                'is_new_arrival' => false,
-                'is_customer_favorite' => false,
-            ],
-            [
-                'name' => 'NMN - Healthy Aging Support',
-                'slug' => 'nmn-healthy-aging-support',
-                'brand_id' => Brand::where('slug', 'infiniwell')->first()->id,
-                'category_id' => Category::where('slug', 'vitamins-supplements')->first()->id,
-                'price' => 69.99,
-                'sale_price' => 62.99,
-                'sku' => 'INF-001',
-                'stock_quantity' => 55,
-                'in_stock' => true,
-                'description' => 'Nicotinamide Mononucleotide for cellular health and healthy aging.',
-                'short_description' => 'Support cellular aging and NAD levels.',
-                'is_best_seller' => false,
                 'is_new_arrival' => false,
                 'is_customer_favorite' => true,
+                'is_featured' => true,
+                'is_active' => true,
+                'sort_order' => 1,
             ],
             [
-                'name' => 'Viviscal Pro Hair Health',
-                'slug' => 'viviscal-pro-hair-health',
-                'brand_id' => Brand::where('slug', 'viviscal')->first()->id,
-                'category_id' => Category::where('slug', 'vitamins-supplements')->first()->id,
-                'price' => 66.99,
-                'sale_price' => null,
-                'sku' => 'VIV-001',
-                'stock_quantity' => 30,
+                'name' => 'Ivermectin 12mg Capsules (60 count)',
+                'slug' => 'ivermectin-12mg-capsules-60',
+                'brand_id' => $nantoshaBrand->id,
+                'category_id' => $ivermectinCategory->id,
+                'price' => 28000, // JPY
+                'sale_price' => 25000, // JPY
+                'price_per_capsule' => 416.67, // JPY
+                'price_per_mg' => 34.72, // JPY per mg
+                'sku' => 'IVM-12MG-60',
+                'stock_quantity' => 75,
                 'in_stock' => true,
-                'description' => 'Professional-grade hair growth supplement.',
-                'short_description' => 'Support healthy hair growth.',
+                'description' => 'Genuine Ivermectin 12mg capsules, 60 count. Best value option for extended treatment. Verified by Japanese research institutions. Each capsule contains 12mg of Ivermectin.',
+                'short_description' => 'Genuine Ivermectin 12mg capsules - 60 count. Best value for extended treatment.',
+                'ingredients' => "Ivermectin: 12mg\nInactive Ingredients: Microcrystalline Cellulose, Magnesium Stearate, Gelatin Capsule",
+                'directions' => 'Take as directed by your healthcare professional. For Strongyloidiasis: Typically 200 mcg/kg body weight as a single dose. For Scabies: Typically 200 mcg/kg body weight, may require a second dose after 1-2 weeks. Consult your doctor for proper dosage.',
+                'warnings' => 'This product is not intended for pregnant or nursing women or by persons under 18. Consult your healthcare professional prior to use if you have or suspect a medical condition or are taking prescription drugs. Discontinue use and seek advice of a doctor if any adverse reactions occur. The Japanese MHLW only approves Ivermectin for two diseases: Strongyloidiasis and Scabies. Resale or transfer to third parties is strictly prohibited.',
+                'country_of_origin' => 'Japan',
+                'manufacturer' => 'Nantosha Pharmaceuticals Co., Ltd.',
+                'supplement_facts' => 'Each capsule contains: Ivermectin 12mg. Manufactured in Japan under strict quality control standards.',
+                'is_best_seller' => true,
+                'is_new_arrival' => false,
+                'is_customer_favorite' => false,
+                'is_featured' => false,
+                'is_active' => true,
+                'sort_order' => 2,
+            ],
+            [
+                'name' => 'Ivermectin 6mg Capsules (30 count)',
+                'slug' => 'ivermectin-6mg-capsules-30',
+                'brand_id' => $medpharmBrand->id,
+                'category_id' => $ivermectinCategory->id,
+                'price' => 8500, // JPY
+                'sale_price' => null,
+                'price_per_capsule' => 283.33, // JPY
+                'price_per_mg' => 47.22, // JPY per mg
+                'sku' => 'IVM-6MG-30',
+                'stock_quantity' => 50,
+                'in_stock' => true,
+                'description' => 'Ivermectin 6mg capsules, 30 count. Lower dosage option for sensitive individuals or pediatric use. Verified by Japanese research institutions.',
+                'short_description' => 'Ivermectin 6mg capsules - 30 count. Lower dosage option.',
+                'ingredients' => "Ivermectin: 6mg\nInactive Ingredients: Microcrystalline Cellulose, Magnesium Stearate, Gelatin Capsule",
+                'directions' => 'Take as directed by your healthcare professional. Lower dosage may be appropriate for certain individuals. Consult your doctor for proper dosage based on body weight and condition.',
+                'warnings' => 'This product is not intended for pregnant or nursing women or by persons under 18. Consult your healthcare professional prior to use if you have or suspect a medical condition or are taking prescription drugs. Discontinue use and seek advice of a doctor if any adverse reactions occur. The Japanese MHLW only approves Ivermectin for two diseases: Strongyloidiasis and Scabies. Resale or transfer to third parties is strictly prohibited.',
+                'country_of_origin' => 'Japan',
+                'manufacturer' => 'MedPharm Japan Co., Ltd.',
+                'supplement_facts' => 'Each capsule contains: Ivermectin 6mg. Manufactured in Japan under strict quality control standards.',
                 'is_best_seller' => false,
                 'is_new_arrival' => true,
                 'is_customer_favorite' => false,
+                'is_featured' => false,
+                'is_active' => true,
+                'sort_order' => 3,
             ],
             [
-                'name' => 'PurePaleo Protein Vanilla',
-                'slug' => 'purepaleo-protein-vanilla',
-                'brand_id' => Brand::where('slug', 'designs-for-health')->first()->id,
-                'category_id' => Category::where('slug', 'protein-fitness')->first()->id,
-                'price' => 72.63,
-                'sale_price' => null,
-                'sku' => 'DFH-003',
-                'stock_quantity' => 45,
+                'name' => 'Ivermectin 12mg Capsules (90 count)',
+                'slug' => 'ivermectin-12mg-capsules-90',
+                'brand_id' => $nantoshaBrand->id,
+                'category_id' => $ivermectinCategory->id,
+                'price' => 40000, // JPY
+                'sale_price' => 36000, // JPY
+                'price_per_capsule' => 400, // JPY
+                'price_per_mg' => 33.33, // JPY per mg
+                'sku' => 'IVM-12MG-90',
+                'stock_quantity' => 40,
                 'in_stock' => true,
-                'description' => 'Clean, paleo-friendly protein powder in vanilla flavor.',
-                'short_description' => 'Premium paleo protein powder.',
-                'is_best_seller' => true,
+                'description' => 'Ivermectin 12mg capsules, 90 count. Maximum value package for long-term treatment. Verified by Japanese research institutions.',
+                'short_description' => 'Ivermectin 12mg capsules - 90 count. Maximum value package.',
+                'ingredients' => "Ivermectin: 12mg\nInactive Ingredients: Microcrystalline Cellulose, Magnesium Stearate, Gelatin Capsule",
+                'directions' => 'Take as directed by your healthcare professional. For Strongyloidiasis: Typically 200 mcg/kg body weight as a single dose. For Scabies: Typically 200 mcg/kg body weight, may require a second dose after 1-2 weeks. Consult your doctor for proper dosage.',
+                'warnings' => 'This product is not intended for pregnant or nursing women or by persons under 18. Consult your healthcare professional prior to use if you have or suspect a medical condition or are taking prescription drugs. Discontinue use and seek advice of a doctor if any adverse reactions occur. The Japanese MHLW only approves Ivermectin for two diseases: Strongyloidiasis and Scabies. Resale or transfer to third parties is strictly prohibited.',
+                'country_of_origin' => 'Japan',
+                'manufacturer' => 'Nantosha Pharmaceuticals Co., Ltd.',
+                'supplement_facts' => 'Each capsule contains: Ivermectin 12mg. Manufactured in Japan under strict quality control standards.',
+                'is_best_seller' => false,
                 'is_new_arrival' => false,
-                'is_customer_favorite' => false,
+                'is_customer_favorite' => true,
+                'is_featured' => false,
+                'is_active' => true,
+                'sort_order' => 4,
             ],
         ];
 
         foreach ($products as $product) {
-            Product::create($product);
+            Product::firstOrCreate(
+                ['slug' => $product['slug']],
+                $product
+            );
         }
     }
 }
