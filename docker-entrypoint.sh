@@ -36,8 +36,6 @@ chmod -R 777 storage/logs || true
 echo "Starting Laravel server on port ${PORT:-8080}..."
 echo "APP_DEBUG=${APP_DEBUG:-false}"
 echo "DB_CONNECTION=${DB_CONNECTION:-not set}"
-echo "Checking database connection..."
-php artisan db:show || echo "Database connection check failed"
 
 exec php artisan serve --host=0.0.0.0 --port=${PORT:-8080} 2>&1
 
