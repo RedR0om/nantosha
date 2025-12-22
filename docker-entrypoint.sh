@@ -14,16 +14,25 @@ fi
 
 # Run migrations
 echo "Running migrations..."
-php artisan migrate --force || echo "Migration failed, continuing..."
+if php artisan migrate --force; then
+    echo "✓ Migrations completed successfully"
+else
+    echo "✗ Migration failed - check database connection"
+    php artisan db:show || echo "Database connection check failed"
+    # Don't exit - allow app to start even if migrations fail
+    # They can be run manually later
+fi
 
 # Run seeders (only if SEED_DATABASE is true or not set, to allow skipping in production if needed)
 if [ "${SEED_DATABASE:-true}" = "true" ]; then
     echo "Running database seeders..."
     if php artisan db:seed --force; then
         echo "✓ Database seeding completed successfully"
+        echo "Seeded data summary:"
+        php artisan tinker --execute="echo '  - Categories: ' . App\Models\Category::count() . PHP_EOL; echo '  - Brands: ' . App\Models\Brand::count() . PHP_EOL; echo '  - Products: ' . App\Models\Product::count() . PHP_EOL; echo '  - FAQs: ' . App\Models\Faq::count() . PHP_EOL;" 2>/dev/null || true
     else
-        echo "✗ Database seeding failed, but continuing..."
-        echo "You can manually run: php artisan db:seed --force"
+        echo "✗ Database seeding failed - check logs for details"
+        # Don't exit - allow app to start even if seeding fails
     fi
 else
     echo "Skipping database seeding (SEED_DATABASE=false)"
