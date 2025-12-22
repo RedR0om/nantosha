@@ -1,20 +1,34 @@
 #!/bin/bash
 set -e
 
+# Clear any cached config first (in case env vars changed)
+php artisan config:clear || true
+php artisan route:clear || true
+php artisan view:clear || true
+
 # Generate app key if not set
-php artisan key:generate --force || true
+if [ -z "$APP_KEY" ]; then
+    echo "Generating APP_KEY..."
+    php artisan key:generate --force
+fi
 
 # Run migrations
-php artisan migrate --force || true
+echo "Running migrations..."
+php artisan migrate --force || echo "Migration failed, continuing..."
 
-# Cache configuration
-php artisan config:cache || true
-php artisan route:cache || true
-php artisan view:cache || true
+# Cache configuration (only if all env vars are set)
+echo "Caching configuration..."
+php artisan config:cache || echo "Config cache failed, using live config"
+php artisan route:cache || echo "Route cache failed, using live routes"
+php artisan view:cache || echo "View cache failed, using live views"
 
 # Create storage link
-php artisan storage:link || true
+php artisan storage:link || echo "Storage link already exists or failed"
+
+# Set proper permissions
+chmod -R 755 storage bootstrap/cache || true
 
 # Start the application
+echo "Starting Laravel server on port ${PORT:-8080}..."
 exec php artisan serve --host=0.0.0.0 --port=${PORT:-8080}
 
