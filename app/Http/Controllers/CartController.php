@@ -43,7 +43,12 @@ class CartController extends Controller
 
             $product = Product::findOrFail($request->product_id);
 
-            if (!$product->in_stock || $product->stock_quantity <= 0) {
+            if (!$product->in_stock) {
+                return back()->withErrors(['product' => 'This product is out of stock.']);
+            }
+
+            // Check stock quantity (allow null stock_quantity for unlimited stock)
+            if ($product->stock_quantity !== null && $product->stock_quantity <= 0) {
                 return back()->withErrors(['product' => 'This product is out of stock.']);
             }
 
@@ -52,6 +57,12 @@ class CartController extends Controller
             $sessionId = Auth::check() ? null : session()->getId();
             $variant = $request->variant ?? null;
             
+            // Ensure session is started for guest users
+            if (!$userId && !$sessionId) {
+                session()->start();
+                $sessionId = session()->getId();
+            }
+            
             // Build query to find existing cart item
             $query = CartItem::where('product_id', $product->id);
             
@@ -59,11 +70,6 @@ class CartController extends Controller
             if ($userId) {
                 $query->where('user_id', $userId)->whereNull('session_id');
             } else {
-                if (!$sessionId) {
-                    // Ensure session is started
-                    session()->start();
-                    $sessionId = session()->getId();
-                }
                 $query->whereNull('user_id')->where('session_id', $sessionId);
             }
             
@@ -87,8 +93,8 @@ class CartController extends Controller
                 // Calculate new total quantity
                 $newQuantity = $cartItem->quantity + $request->quantity;
                 
-                // Check if new quantity exceeds available stock
-                if ($newQuantity > $product->stock_quantity) {
+                // Check if new quantity exceeds available stock (only if stock_quantity is set)
+                if ($product->stock_quantity !== null && $newQuantity > $product->stock_quantity) {
                     return back()->withErrors(['product' => "Only {$product->stock_quantity} items available in stock."]);
                 }
                 
@@ -98,8 +104,8 @@ class CartController extends Controller
                     'price' => $price,
                 ]);
             } else {
-                // Check if requested quantity exceeds available stock
-                if ($request->quantity > $product->stock_quantity) {
+                // Check if requested quantity exceeds available stock (only if stock_quantity is set)
+                if ($product->stock_quantity !== null && $request->quantity > $product->stock_quantity) {
                     return back()->withErrors(['product' => "Only {$product->stock_quantity} items available in stock."]);
                 }
                 
@@ -115,13 +121,28 @@ class CartController extends Controller
             }
 
             return back()->with('success', 'Product added to cart!');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            \Log::error('Cart store validation error', [
+                'errors' => $e->errors(),
+                'request' => $request->all(),
+            ]);
+            return back()->withErrors($e->errors());
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            \Log::error('Cart store error: Product not found', [
+                'product_id' => $request->product_id,
+                'request' => $request->all(),
+            ]);
+            return back()->withErrors(['product' => 'Product not found.']);
         } catch (\Exception $e) {
             \Log::error('Cart store error: ' . $e->getMessage(), [
+                'exception' => get_class($e),
                 'request' => $request->all(),
                 'trace' => $e->getTraceAsString(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
             ]);
             
-            return back()->withErrors(['error' => 'Failed to add product to cart. Please try again.']);
+            return back()->withErrors(['error' => 'Failed to add product to cart: ' . $e->getMessage()]);
         }
     }
 
