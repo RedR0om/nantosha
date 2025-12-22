@@ -37,11 +37,17 @@ class CategorySeeder extends Seeder
         ];
 
         foreach ($categories as $category) {
-            Category::firstOrCreate(
+            $created = Category::firstOrCreate(
                 ['slug' => $category['slug']],
                 $category
             );
+            if ($created->wasRecentlyCreated) {
+                $this->command->info("Created category: {$category['name']}");
+            } else {
+                $this->command->line("Category already exists: {$category['name']}");
+            }
         }
+        $this->command->info("Category seeding completed. Total categories: " . Category::count());
     }
 }
 

@@ -19,7 +19,12 @@ php artisan migrate --force || echo "Migration failed, continuing..."
 # Run seeders (only if SEED_DATABASE is true or not set, to allow skipping in production if needed)
 if [ "${SEED_DATABASE:-true}" = "true" ]; then
     echo "Running database seeders..."
-    php artisan db:seed --force || echo "Seeding failed, continuing..."
+    if php artisan db:seed --force; then
+        echo "✓ Database seeding completed successfully"
+    else
+        echo "✗ Database seeding failed, but continuing..."
+        echo "You can manually run: php artisan db:seed --force"
+    fi
 else
     echo "Skipping database seeding (SEED_DATABASE=false)"
 fi

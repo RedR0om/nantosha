@@ -34,11 +34,17 @@ class BrandSeeder extends Seeder
         ];
 
         foreach ($brands as $brand) {
-            Brand::firstOrCreate(
+            $created = Brand::firstOrCreate(
                 ['slug' => $brand['slug']],
                 $brand
             );
+            if ($created->wasRecentlyCreated) {
+                $this->command->info("Created brand: {$brand['name']}");
+            } else {
+                $this->command->line("Brand already exists: {$brand['name']}");
+            }
         }
+        $this->command->info("Brand seeding completed. Total brands: " . Brand::count());
     }
 }
 

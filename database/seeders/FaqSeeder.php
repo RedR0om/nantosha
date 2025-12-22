@@ -51,10 +51,16 @@ class FaqSeeder extends Seeder
         ];
 
         foreach ($faqs as $faq) {
-            Faq::firstOrCreate(
+            $created = Faq::firstOrCreate(
                 ['question' => $faq['question']],
                 $faq
             );
+            if ($created->wasRecentlyCreated) {
+                $this->command->info("Created FAQ: {$faq['question']}");
+            } else {
+                $this->command->line("FAQ already exists: {$faq['question']}");
+            }
         }
+        $this->command->info("FAQ seeding completed. Total FAQs: " . Faq::count());
     }
 }

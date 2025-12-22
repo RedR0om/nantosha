@@ -141,10 +141,16 @@ class ProductSeeder extends Seeder
         ];
 
         foreach ($products as $product) {
-            Product::firstOrCreate(
+            $created = Product::firstOrCreate(
                 ['slug' => $product['slug']],
                 $product
             );
+            if ($created->wasRecentlyCreated) {
+                $this->command->info("Created product: {$product['name']}");
+            } else {
+                $this->command->line("Product already exists: {$product['name']}");
+            }
         }
+        $this->command->info("Product seeding completed. Total products: " . Product::count());
     }
 }
