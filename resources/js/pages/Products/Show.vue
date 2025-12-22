@@ -73,6 +73,9 @@ const addToCart = () => {
         onError: (errors) => {
             isAdding.value = false;
             console.error('Error adding to cart:', errors);
+            // Still open cart sidebar so user can see their current cart
+            // The error message will be displayed on the page
+            window.dispatchEvent(new CustomEvent('openCartSidebar'));
         },
         onFinish: () => {
             isAdding.value = false;

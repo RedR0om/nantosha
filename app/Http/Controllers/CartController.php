@@ -74,14 +74,19 @@ class CartController extends Controller
             }
             
             // Match variant if provided, otherwise match null/empty variants
+            // PostgreSQL requires explicit casting for JSON comparisons
             if ($variant && is_array($variant) && count($variant) > 0) {
-                $query->where('variant', json_encode($variant));
+                // For PostgreSQL, compare JSON by casting to text
+                $variantJson = json_encode($variant, JSON_UNESCAPED_SLASHES);
+                $query->whereRaw('variant::text = ?', [$variantJson]);
             } else {
+                // For products without variants, check for null or empty JSON
+                // PostgreSQL: cast JSON to text for comparison
                 $query->where(function ($q) {
                     $q->whereNull('variant')
-                      ->orWhere('variant', '[]')
-                      ->orWhere('variant', 'null')
-                      ->orWhere('variant', '');
+                      ->orWhereRaw('variant::text = ?', ['[]'])
+                      ->orWhereRaw('variant::text = ?', ['null'])
+                      ->orWhereRaw('variant::text = ?', ['""']);
                 });
             }
             
