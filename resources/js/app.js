@@ -56,6 +56,9 @@ const pages = {
     'Admin/Carousel/Index': () => import('./pages/Admin/Carousel/Index.vue'),
     'Admin/Carousel/Create': () => import('./pages/Admin/Carousel/Create.vue'),
     'Admin/Carousel/Edit': () => import('./pages/Admin/Carousel/Edit.vue'),
+    'Admin/HomePageSections/Index': () => import('./pages/Admin/HomePageSections/Index.vue'),
+    'Admin/HomePageSections/Create': () => import('./pages/Admin/HomePageSections/Create.vue'),
+    'Admin/HomePageSections/Edit': () => import('./pages/Admin/HomePageSections/Edit.vue'),
     
     // Settings pages
     'settings/Profile': () => import('./pages/settings/Profile.vue'),

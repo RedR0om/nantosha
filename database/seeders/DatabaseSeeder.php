@@ -20,12 +20,13 @@ class DatabaseSeeder extends Seeder
             'email' => 'test@example.com',
         ]);
 
-        // Seed categories, brands, products, and FAQs
+        // Seed categories, brands, products, FAQs, and homepage sections
         $this->call([
             CategorySeeder::class,
             BrandSeeder::class,
             ProductSeeder::class,
             FaqSeeder::class,
+            HomePageSectionSeeder::class,
         ]);
     }
 }

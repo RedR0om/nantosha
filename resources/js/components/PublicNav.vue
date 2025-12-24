@@ -3,7 +3,10 @@ import { Link, usePage, router } from '@inertiajs/vue3';
 import { computed } from 'vue';
 import { Menu, X, LogIn, User, LogOut, ShoppingCart } from 'lucide-vue-next';
 import { ref } from 'vue';
-import { login, logout, dashboard } from '@/routes';
+// Routes are handled directly with URLs
+import { useLanguage } from '@/composables/useLanguage';
+
+const { language, setLanguage } = useLanguage();
 
 const page = usePage();
 const mobileMenuOpen = ref(false);
@@ -58,7 +61,7 @@ const toggleMobileMenu = () => {
 };
 
 const handleLogout = () => {
-    router.post(logout.url());
+    router.post('/logout');
 };
 </script>
 
@@ -91,6 +94,32 @@ const handleLogout = () => {
                         </div>
                     </Link>
                     
+                    <!-- Language Switcher -->
+                    <div class="flex items-center gap-1 border border-gray-300 rounded-lg overflow-hidden">
+                        <button
+                            @click="setLanguage('en')"
+                            :class="[
+                                'px-3 py-1.5 text-xs font-medium transition-colors',
+                                language === 'en'
+                                    ? 'bg-gray-900 text-white'
+                                    : 'bg-white text-gray-600 hover:bg-gray-50'
+                            ]"
+                        >
+                            EN
+                        </button>
+                        <button
+                            @click="setLanguage('ja')"
+                            :class="[
+                                'px-3 py-1.5 text-xs font-medium transition-colors',
+                                language === 'ja'
+                                    ? 'bg-gray-900 text-white'
+                                    : 'bg-white text-gray-600 hover:bg-gray-50'
+                            ]"
+                        >
+                            日本語
+                        </button>
+                    </div>
+                    
                     <!-- Cart Icon -->
                     <button
                         @click="openCartSidebar"
@@ -110,7 +139,7 @@ const handleLogout = () => {
                     <div class="flex items-center space-x-3 ml-4 pl-4 border-l border-gray-200">
                         <template v-if="!isAuthenticated">
                             <Link
-                                :href="login.url()"
+                                href="/login"
                                 class="flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors"
                             >
                                 <LogIn class="w-4 h-4" />
@@ -119,7 +148,7 @@ const handleLogout = () => {
                         </template>
                         <template v-else>
                             <Link
-                                :href="dashboard.url()"
+                                href="/dashboard"
                                 class="flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors"
                             >
                                 <User class="w-4 h-4" />
@@ -171,6 +200,37 @@ const handleLogout = () => {
                         </div>
                     </Link>
                     
+                    <!-- Mobile Language Switcher -->
+                    <div class="border-t border-gray-200 mt-2 pt-2 px-3 py-2">
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm font-medium text-gray-700">Language</span>
+                            <div class="flex items-center gap-1 border border-gray-300 rounded-lg overflow-hidden">
+                                <button
+                                    @click="setLanguage('en')"
+                                    :class="[
+                                        'px-3 py-1.5 text-xs font-medium transition-colors',
+                                        language === 'en'
+                                            ? 'bg-gray-900 text-white'
+                                            : 'bg-white text-gray-600 hover:bg-gray-50'
+                                    ]"
+                                >
+                                    EN
+                                </button>
+                                <button
+                                    @click="setLanguage('ja')"
+                                    :class="[
+                                        'px-3 py-1.5 text-xs font-medium transition-colors',
+                                        language === 'ja'
+                                            ? 'bg-gray-900 text-white'
+                                            : 'bg-white text-gray-600 hover:bg-gray-50'
+                                    ]"
+                                >
+                                    日本語
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
                     <!-- Mobile Cart Button -->
                     <div class="border-t border-gray-200 mt-2 pt-2">
                         <button
@@ -192,7 +252,7 @@ const handleLogout = () => {
                     <div class="border-t border-gray-200 mt-2 pt-2">
                         <template v-if="!isAuthenticated">
                             <Link
-                                :href="login.url()"
+                                href="/login"
                                 @click="mobileMenuOpen = false"
                                 class="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors"
                             >
@@ -202,7 +262,7 @@ const handleLogout = () => {
                         </template>
                         <template v-else>
                             <Link
-                                :href="dashboard.url()"
+                                href="/dashboard"
                                 @click="mobileMenuOpen = false"
                                 class="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors"
                             >

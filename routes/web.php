@@ -42,6 +42,10 @@ Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.sh
 Route::get('/blog', [BlogController::class, 'index'])->name('blog.index');
 Route::get('/blog/{slug}', [BlogController::class, 'show'])->name('blog.show');
 
+// Translation
+Route::post('/api/translate', [\App\Http\Controllers\TranslationController::class, 'translate'])->name('translate');
+Route::post('/api/translate/batch', [\App\Http\Controllers\TranslationController::class, 'translateBatch'])->name('translate.batch');
+
 // Information Pages
 Route::get('/how-to-order', [HowToOrderController::class, 'index'])->name('how-to-order');
 Route::get('/faq', [FAQController::class, 'index'])->name('faq');
@@ -57,6 +61,7 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
     Route::resource('brands', \App\Http\Controllers\Admin\BrandController::class);
     Route::resource('categories', \App\Http\Controllers\Admin\CategoryController::class);
     Route::resource('carousel', \App\Http\Controllers\Admin\CarouselController::class);
+    Route::resource('homepage-sections', \App\Http\Controllers\Admin\HomePageSectionController::class);
     Route::resource('faqs', \App\Http\Controllers\Admin\FaqController::class);
     Route::get('inventory', [InventoryController::class, 'index'])->name('inventory.index');
     Route::put('inventory/{product}', [InventoryController::class, 'update'])->name('inventory.update');

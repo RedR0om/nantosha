@@ -1,8 +1,12 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
-import { ref } from 'vue';
+import { ref, watch, onMounted } from 'vue';
 import PublicNav from '@/components/PublicNav.vue';
 import { ChevronDown, ChevronUp } from 'lucide-vue-next';
+import { useLanguage } from '@/composables/useLanguage';
+import { translateText } from '@/composables/useTranslation';
+
+const { language } = useLanguage();
 
 const props = defineProps<{
     faqs: Array<{
@@ -22,6 +26,43 @@ const toggleFaq = (id: number) => {
         openFaqs.value.push(id);
     }
 };
+
+// Translate static text
+const texts = ref({
+    title: 'Frequently Asked Questions',
+    subtitle: 'よくある質問',
+    stillHaveQuestions: 'Still have questions?',
+    stillHaveQuestionsText: 'If you have additional questions, please don\'t hesitate to contact us.',
+    contactUs: 'Contact Us',
+});
+
+const translated = ref<Record<string, string>>({});
+const translatedFaqs = ref<Array<{id: number; question: string; answer: string}>>([]);
+
+const translateAll = async () => {
+    // Translate static text (bidirectional)
+    const keys = Object.keys(texts.value);
+    for (const key of keys) {
+        try {
+            translated.value[key] = await translateText(texts.value[key], language.value, 'auto');
+        } catch (error) {
+            translated.value[key] = texts.value[key];
+        }
+    }
+
+    // Translate FAQs (bidirectional)
+    translatedFaqs.value = await Promise.all(
+        props.faqs.map(async (faq) => ({
+            id: faq.id,
+            question: await translateText(faq.question, language.value, 'auto'),
+            answer: await translateText(faq.answer, language.value, 'auto'),
+        }))
+    );
+};
+
+watch(language, translateAll, { immediate: true });
+watch(() => props.faqs, translateAll, { deep: true });
+onMounted(translateAll);
 </script>
 
 <template>
@@ -33,14 +74,14 @@ const toggleFaq = (id: number) => {
         <div class="container mx-auto px-4 max-w-4xl">
             <div class="text-center mb-12">
                 <h1 class="text-4xl font-bold text-gray-900 mb-2">
-                    Frequently Asked Questions
+                    {{ translated.title || texts.title }}
                 </h1>
-                <p class="text-2xl text-gray-600">よくある質問</p>
+                <p class="text-2xl text-gray-600">{{ translated.subtitle || texts.subtitle }}</p>
             </div>
 
             <div class="space-y-4">
                 <div
-                    v-for="faq in faqs"
+                    v-for="faq in (translatedFaqs.length > 0 ? translatedFaqs : faqs)"
                     :key="faq.id"
                     class="border border-gray-200 rounded-lg overflow-hidden"
                 >
@@ -52,7 +93,6 @@ const toggleFaq = (id: number) => {
                             <h3 class="font-semibold text-gray-900 mb-1">
                                 {{ faq.question }}
                             </h3>
-                            <p v-if="faq.question_ja" class="text-sm text-gray-600">{{ faq.question_ja }}</p>
                         </div>
                         <div class="ml-4">
                             <ChevronDown
@@ -78,16 +118,16 @@ const toggleFaq = (id: number) => {
 
             <div class="mt-12 bg-blue-50 border-l-4 border-blue-500 p-6 rounded">
                 <h3 class="text-xl font-bold text-gray-900 mb-2">
-                    Still have questions?
+                    {{ translated.stillHaveQuestions || texts.stillHaveQuestions }}
                 </h3>
                 <p class="text-gray-700 mb-4">
-                    If you have additional questions, please don't hesitate to contact us.
+                    {{ translated.stillHaveQuestionsText || texts.stillHaveQuestionsText }}
                 </p>
                 <a
                     href="/contact"
                     class="inline-block bg-blue-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-blue-700 transition"
                 >
-                    Contact Us
+                    {{ translated.contactUs || texts.contactUs }}
                 </a>
             </div>
         </div>

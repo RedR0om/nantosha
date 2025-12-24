@@ -6,7 +6,6 @@ import { Link } from '@inertiajs/vue3';
 
 const form = useForm({
     question: '',
-    question_ja: '',
     answer: '',
     sort_order: 0,
     is_active: true,
@@ -56,18 +55,7 @@ const submit = () => {
                             </div>
 
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                    Question (Japanese)
-                                </label>
-                                <input
-                                    v-model="form.question_ja"
-                                    type="text"
-                                    class="w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-500 focus:border-gray-900 dark:focus:border-gray-500"
-                                    placeholder="質問を入力してください"
-                                />
-                                <p v-if="form.errors.question_ja" class="mt-1 text-sm text-red-600 dark:text-red-400">
-                                    {{ form.errors.question_ja }}
-                                </p>
+                                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400 mb-4">Content will be automatically translated to Japanese when viewed</p>
                             </div>
 
                             <div>

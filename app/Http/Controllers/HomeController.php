@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Product;
 use App\Models\CarouselSlide;
 use App\Models\Setting;
+use App\Models\HomePageSection;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -18,6 +19,12 @@ class HomeController extends Controller
             ->get();
 
         $multiProductMode = Setting::isEnabled('multi_product_mode');
+
+        // Fetch homepage sections (active, ordered)
+        $homepageSections = HomePageSection::where('is_active', true)
+            ->orderBy('sort_order')
+            ->orderBy('created_at', 'asc')
+            ->get();
 
         if ($multiProductMode) {
             // Multiple products mode - show carousels
@@ -44,6 +51,7 @@ class HomeController extends Controller
 
             return Inertia::render('Home', [
                 'carouselSlides' => $carouselSlides,
+                'homepageSections' => $homepageSections,
                 'bestSellers' => $bestSellers,
                 'newArrivals' => $newArrivals,
                 'customerFavorites' => $customerFavorites,
@@ -68,6 +76,7 @@ class HomeController extends Controller
 
             return Inertia::render('Home', [
                 'carouselSlides' => $carouselSlides,
+                'homepageSections' => $homepageSections,
                 'bestSellers' => collect(),
                 'newArrivals' => collect(),
                 'customerFavorites' => collect(),

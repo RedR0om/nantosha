@@ -3,7 +3,12 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { dashboard } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link } from '@inertiajs/vue3';
-import { Package, Plus, ShoppingBag, TrendingUp, Users, DollarSign, Image, Settings, ShoppingCart, HelpCircle, Tag, Folder } from 'lucide-vue-next';
+import { ref, watch, onMounted } from 'vue';
+import { Package, Plus, ShoppingBag, TrendingUp, Users, DollarSign, Image, Settings, ShoppingCart, HelpCircle, Tag, Folder, Layout } from 'lucide-vue-next';
+import { useLanguage } from '@/composables/useLanguage';
+import { translateText } from '@/composables/useTranslation';
+
+const { language } = useLanguage();
 
 const props = defineProps<{
     stats: {
@@ -28,6 +33,52 @@ const formatCurrency = (amount: number) => {
         minimumFractionDigits: 0,
     }).format(amount);
 };
+
+// Translation for admin dashboard (simplified - admin typically uses English)
+// But we'll support translation for consistency
+const texts = ref({
+    manageProducts: 'Manage Products',
+    manageProductsDesc: 'View, edit, and manage your product catalog',
+    createProduct: 'Create Product',
+    createProductDesc: 'Add a new product to your store',
+    inventory: 'Inventory',
+    inventoryDesc: 'Track stock levels and availability',
+    manageCarousel: 'Manage Carousel',
+    manageCarouselDesc: 'Manage homepage carousel slides',
+    homepageSections: 'Homepage Sections',
+    homepageSectionsDesc: 'Manage homepage content sections',
+    settings: 'Settings',
+    settingsDesc: 'Configure system settings',
+    orders: 'Orders',
+    ordersDesc: 'View and manage all orders',
+    manageFaqs: 'Manage FAQs',
+    manageFaqsDesc: 'Add and manage FAQ questions',
+    manageBrands: 'Manage Brands',
+    manageBrandsDesc: 'Add and manage product brands',
+    manageCategories: 'Manage Categories',
+    manageCategoriesDesc: 'Add and manage product categories',
+    totalProducts: 'Total Products',
+    activeProducts: 'Active Products',
+    totalSales: 'Total Sales',
+    customers: 'Customers',
+});
+
+const translated = ref<Record<string, string>>({});
+
+const translateAll = async () => {
+    // Translate bidirectionally
+    const keys = Object.keys(texts.value);
+    for (const key of keys) {
+        try {
+            translated.value[key] = await translateText(texts.value[key], language.value, 'auto');
+        } catch (error) {
+            translated.value[key] = texts.value[key];
+        }
+    }
+};
+
+watch(language, translateAll, { immediate: true });
+onMounted(translateAll);
 </script>
 
 <template>
@@ -47,8 +98,8 @@ const formatCurrency = (amount: number) => {
                             <ShoppingBag class="w-6 h-6 text-white" />
                         </div>
                     </div>
-                    <h3 class="text-lg font-semibold text-gray-900 mb-1">Manage Products</h3>
-                    <p class="text-sm text-gray-600">View, edit, and manage your product catalog</p>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-1">{{ translated.manageProducts || texts.manageProducts }}</h3>
+                    <p class="text-sm text-gray-600">{{ translated.manageProductsDesc || texts.manageProductsDesc }}</p>
                 </Link>
 
                 <Link
@@ -60,8 +111,8 @@ const formatCurrency = (amount: number) => {
                             <Plus class="w-6 h-6 text-white" />
                         </div>
                     </div>
-                    <h3 class="text-lg font-semibold text-gray-900 mb-1">Create Product</h3>
-                    <p class="text-sm text-gray-600">Add a new product to your store</p>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-1">{{ translated.createProduct || texts.createProduct }}</h3>
+                    <p class="text-sm text-gray-600">{{ translated.createProductDesc || texts.createProductDesc }}</p>
                 </Link>
 
                 <Link
@@ -73,8 +124,8 @@ const formatCurrency = (amount: number) => {
                             <Package class="w-6 h-6 text-white" />
                         </div>
                     </div>
-                    <h3 class="text-lg font-semibold text-gray-900 mb-1">Inventory</h3>
-                    <p class="text-sm text-gray-600">Track stock levels and availability</p>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-1">{{ translated.inventory || texts.inventory }}</h3>
+                    <p class="text-sm text-gray-600">{{ translated.inventoryDesc || texts.inventoryDesc }}</p>
                 </Link>
 
                 <Link
@@ -86,8 +137,21 @@ const formatCurrency = (amount: number) => {
                             <Image class="w-6 h-6 text-white" />
                         </div>
                     </div>
-                    <h3 class="text-lg font-semibold text-gray-900 mb-1">Manage Carousel</h3>
-                    <p class="text-sm text-gray-600">Manage homepage carousel slides</p>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-1">{{ translated.manageCarousel || texts.manageCarousel }}</h3>
+                    <p class="text-sm text-gray-600">{{ translated.manageCarouselDesc || texts.manageCarouselDesc }}</p>
+                </Link>
+
+                <Link
+                    href="/admin/homepage-sections"
+                    class="group bg-white border border-gray-200 rounded-lg p-6 hover:border-gray-900 hover:shadow-lg transition-all"
+                >
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-12 h-12 bg-gray-900 rounded-lg flex items-center justify-center group-hover:bg-gray-800 transition-colors">
+                            <Layout class="w-6 h-6 text-white" />
+                        </div>
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-1">{{ translated.homepageSections || texts.homepageSections }}</h3>
+                    <p class="text-sm text-gray-600">{{ translated.homepageSectionsDesc || texts.homepageSectionsDesc }}</p>
                 </Link>
 
                 <Link
@@ -99,8 +163,8 @@ const formatCurrency = (amount: number) => {
                             <Settings class="w-6 h-6 text-white" />
                         </div>
                     </div>
-                    <h3 class="text-lg font-semibold text-gray-900 mb-1">Settings</h3>
-                    <p class="text-sm text-gray-600">Configure system settings</p>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-1">{{ translated.settings || texts.settings }}</h3>
+                    <p class="text-sm text-gray-600">{{ translated.settingsDesc || texts.settingsDesc }}</p>
                 </Link>
 
                 <Link
@@ -112,8 +176,8 @@ const formatCurrency = (amount: number) => {
                             <ShoppingCart class="w-6 h-6 text-white" />
                         </div>
                     </div>
-                    <h3 class="text-lg font-semibold text-gray-900 mb-1">Orders</h3>
-                    <p class="text-sm text-gray-600">View and manage all orders</p>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-1">{{ translated.orders || texts.orders }}</h3>
+                    <p class="text-sm text-gray-600">{{ translated.ordersDesc || texts.ordersDesc }}</p>
                 </Link>
 
                 <Link
@@ -125,8 +189,8 @@ const formatCurrency = (amount: number) => {
                             <HelpCircle class="w-6 h-6 text-white" />
                         </div>
                     </div>
-                    <h3 class="text-lg font-semibold text-gray-900 mb-1">Manage FAQs</h3>
-                    <p class="text-sm text-gray-600">Add and manage FAQ questions</p>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-1">{{ translated.manageFaqs || texts.manageFaqs }}</h3>
+                    <p class="text-sm text-gray-600">{{ translated.manageFaqsDesc || texts.manageFaqsDesc }}</p>
                 </Link>
 
                 <Link
@@ -138,8 +202,8 @@ const formatCurrency = (amount: number) => {
                             <Tag class="w-6 h-6 text-white" />
                         </div>
                     </div>
-                    <h3 class="text-lg font-semibold text-gray-900 mb-1">Manage Brands</h3>
-                    <p class="text-sm text-gray-600">Add and manage product brands</p>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-1">{{ translated.manageBrands || texts.manageBrands }}</h3>
+                    <p class="text-sm text-gray-600">{{ translated.manageBrandsDesc || texts.manageBrandsDesc }}</p>
                 </Link>
 
                 <Link
@@ -151,8 +215,8 @@ const formatCurrency = (amount: number) => {
                             <Folder class="w-6 h-6 text-white" />
                         </div>
                     </div>
-                    <h3 class="text-lg font-semibold text-gray-900 mb-1">Manage Categories</h3>
-                    <p class="text-sm text-gray-600">Add and manage product categories</p>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-1">{{ translated.manageCategories || texts.manageCategories }}</h3>
+                    <p class="text-sm text-gray-600">{{ translated.manageCategoriesDesc || texts.manageCategoriesDesc }}</p>
                 </Link>
             </div>
 
@@ -161,7 +225,7 @@ const formatCurrency = (amount: number) => {
                 <div class="bg-white border border-gray-200 rounded-lg p-6">
                     <div class="flex items-center justify-between">
                         <div>
-                            <p class="text-sm font-medium text-gray-600 mb-1">Total Products</p>
+                            <p class="text-sm font-medium text-gray-600 mb-1">{{ translated.totalProducts || texts.totalProducts }}</p>
                             <p class="text-2xl font-bold text-gray-900">{{ stats.total_products }}</p>
                         </div>
                         <div class="w-12 h-12 bg-gray-50 rounded-lg flex items-center justify-center">
@@ -173,7 +237,7 @@ const formatCurrency = (amount: number) => {
                 <div class="bg-white border border-gray-200 rounded-lg p-6">
                     <div class="flex items-center justify-between">
                         <div>
-                            <p class="text-sm font-medium text-gray-600 mb-1">Active Products</p>
+                            <p class="text-sm font-medium text-gray-600 mb-1">{{ translated.activeProducts || texts.activeProducts }}</p>
                             <p class="text-2xl font-bold text-gray-900">{{ stats.active_products }}</p>
                         </div>
                         <div class="w-12 h-12 bg-green-50 rounded-lg flex items-center justify-center">
@@ -185,7 +249,7 @@ const formatCurrency = (amount: number) => {
                 <div class="bg-white border border-gray-200 rounded-lg p-6">
                     <div class="flex items-center justify-between">
                         <div>
-                            <p class="text-sm font-medium text-gray-600 mb-1">Total Sales</p>
+                            <p class="text-sm font-medium text-gray-600 mb-1">{{ translated.totalSales || texts.totalSales }}</p>
                             <p class="text-2xl font-bold text-gray-900">{{ formatCurrency(stats.total_sales) }}</p>
                         </div>
                         <div class="w-12 h-12 bg-blue-50 rounded-lg flex items-center justify-center">
@@ -197,7 +261,7 @@ const formatCurrency = (amount: number) => {
                 <div class="bg-white border border-gray-200 rounded-lg p-6">
                     <div class="flex items-center justify-between">
                         <div>
-                            <p class="text-sm font-medium text-gray-600 mb-1">Customers</p>
+                            <p class="text-sm font-medium text-gray-600 mb-1">{{ translated.customers || texts.customers }}</p>
                             <p class="text-2xl font-bold text-gray-900">{{ stats.total_customers }}</p>
                         </div>
                         <div class="w-12 h-12 bg-purple-50 rounded-lg flex items-center justify-center">

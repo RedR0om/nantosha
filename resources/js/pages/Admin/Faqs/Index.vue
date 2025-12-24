@@ -46,9 +46,6 @@ const deleteFaq = (faqId: number) => {
                                         Question
                                     </th>
                                     <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
-                                        Question (Japanese)
-                                    </th>
-                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
                                         Sort Order
                                     </th>
                                     <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
@@ -68,11 +65,6 @@ const deleteFaq = (faqId: number) => {
                                     <td class="px-6 py-4">
                                         <div class="text-sm font-medium text-gray-900 dark:text-white max-w-md">
                                             {{ faq.question }}
-                                        </div>
-                                    </td>
-                                    <td class="px-6 py-4">
-                                        <div class="text-sm text-gray-600 dark:text-gray-400 max-w-md">
-                                            {{ faq.question_ja || 'N/A' }}
                                         </div>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">

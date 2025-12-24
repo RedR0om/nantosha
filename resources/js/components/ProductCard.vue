@@ -1,6 +1,11 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
 import { router } from '@inertiajs/vue3';
+import { ref, watch, onMounted } from 'vue';
+import { useLanguage } from '@/composables/useLanguage';
+import { translateText } from '@/composables/useTranslation';
+
+const { language } = useLanguage();
 
 defineProps<{
     product: {
@@ -38,6 +43,40 @@ const formatPrice = (price: number) => {
         minimumFractionDigits: 0,
     }).format(price);
 };
+
+// Translate static text
+const texts = ref({
+    vendor: 'Vendor:',
+    unitPrice: 'Unit price / per',
+    availability: 'Availability :',
+    inStock: 'In Stock',
+    outOfStock: 'Out of Stock',
+    addToCart: 'Add to cart',
+    soldOut: 'Sold out',
+    sale: 'Sale',
+    noImage: 'No Image',
+});
+
+const translated = ref<Record<string, string>>({});
+
+const translateAll = async () => {
+    if (language.value === 'en') {
+        translated.value = { ...texts.value };
+        return;
+    }
+
+    const keys = Object.keys(texts.value);
+    for (const key of keys) {
+        try {
+            translated.value[key] = await translateText(texts.value[key], 'ja');
+        } catch (error) {
+            translated.value[key] = texts.value[key];
+        }
+    }
+};
+
+watch(language, translateAll, { immediate: true });
+onMounted(translateAll);
 </script>
 
 <template>
@@ -54,13 +93,13 @@ const formatPrice = (price: number) => {
                     v-else
                     class="w-full h-full flex items-center justify-center text-gray-400 bg-gray-100"
                 >
-                    No Image
+                    {{ translated.noImage || texts.noImage }}
                 </div>
                 <div
                     v-if="product.sale_price"
                     class="absolute top-2 right-2 bg-black text-white px-2 py-1 text-xs font-medium uppercase tracking-wide"
                 >
-                    Sale
+                    {{ translated.sale || texts.sale }}
                 </div>
             </div>
         </Link>
@@ -70,7 +109,7 @@ const formatPrice = (price: number) => {
                 v-if="product.brand"
                 class="text-xs text-gray-500 mb-1 uppercase tracking-wide"
             >
-                Vendor: {{ product.brand.name }}
+                {{ translated.vendor || texts.vendor }} {{ product.brand.name }}
             </p>
             <Link :href="`/products/${product.slug}`" class="block">
                 <h3 class="text-sm font-medium text-gray-900 mb-2 line-clamp-2 hover:text-gray-700 transition-colors leading-snug">
@@ -93,14 +132,14 @@ const formatPrice = (price: number) => {
                     </span>
                 </div>
                 <p class="text-xs text-gray-500 mt-1">
-                    Unit price / per
+                    {{ translated.unitPrice || texts.unitPrice }}
                 </p>
             </div>
             
             <div class="mb-2">
                 <span class="text-xs text-gray-600">
-                    Availability : <span :class="product.in_stock ? 'text-green-600 font-medium' : 'text-red-600'">
-                        {{ product.in_stock ? 'In Stock' : 'Out of Stock' }}
+                    {{ translated.availability || texts.availability }} <span :class="product.in_stock ? 'text-green-600 font-medium' : 'text-red-600'">
+                        {{ product.in_stock ? (translated.inStock || texts.inStock) : (translated.outOfStock || texts.outOfStock) }}
                     </span>
                 </span>
             </div>
@@ -110,7 +149,7 @@ const formatPrice = (price: number) => {
                 :disabled="!product.in_stock"
                 class="w-full bg-black text-white py-2.5 text-sm font-medium hover:bg-gray-800 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed disabled:hover:bg-gray-300 uppercase tracking-wide"
             >
-                {{ product.in_stock ? 'Add to cart' : 'Sold out' }}
+                {{ product.in_stock ? (translated.addToCart || texts.addToCart) : (translated.soldOut || texts.soldOut) }}
             </button>
         </div>
     </div>

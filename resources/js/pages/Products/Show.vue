@@ -1,10 +1,14 @@
 <script setup lang="ts">
 import { Head, router, usePage } from '@inertiajs/vue3';
-import { ref, computed } from 'vue';
+import { ref, computed, watch, onMounted } from 'vue';
 import ProductCard from '@/components/ProductCard.vue';
 import PublicNav from '@/components/PublicNav.vue';
 import CartSidebarWrapper from '@/components/CartSidebarWrapper.vue';
 import { CheckCircle } from 'lucide-vue-next';
+import { useLanguage } from '@/composables/useLanguage';
+import { translateText, translateContent } from '@/composables/useTranslation';
+
+const { language } = useLanguage();
 
 const props = defineProps<{
     product: any;
@@ -19,31 +23,117 @@ const activeTab = ref('overview');
 
 // Get all images (main image + additional images)
 const allImages = computed(() => {
+    const product = translatedProduct.value || props.product;
     const images = [];
-    if (props.product.image) {
-        images.push(props.product.image);
+    if (product.image) {
+        images.push(product.image);
     }
-    if (props.product.images && Array.isArray(props.product.images)) {
-        images.push(...props.product.images);
+    if (product.images && Array.isArray(product.images)) {
+        images.push(...product.images);
     }
     return images;
 });
 
 const currentImage = computed(() => {
-    return allImages.value[selectedImageIndex.value] || props.product.image;
+    const product = translatedProduct.value || props.product;
+    return allImages.value[selectedImageIndex.value] || product.image;
 });
 
 const selectImage = (index: number) => {
     selectedImageIndex.value = index;
 };
 
-const tabs = [
+const tabs = ref([
     { id: 'overview', label: 'Product Overview' },
     { id: 'features', label: 'Product Features' },
     { id: 'ingredients', label: 'Ingredients' },
     { id: 'dosage', label: 'Dosage/Suggested Use' },
     { id: 'warnings', label: 'Warnings' },
-];
+]);
+
+// Translated product data
+const translatedProduct = ref<any>(null);
+const translatedRelatedProducts = ref<any[]>([]);
+
+// Static text translations
+const texts = ref({
+    lowestPrice: 'Lowest Price:',
+    perCapsule: 'per capsule',
+    price: 'Price:',
+    verified: 'Verified by Japanese research institutions',
+    noOverview: 'No product overview available.',
+    brand: 'Brand',
+    countryOfOrigin: 'Country of Origin',
+    manufacturer: 'Manufacturer',
+    category: 'Category',
+    noIngredients: 'No ingredients information available.',
+    noDosage: 'No dosage information available.',
+    pricing: 'Pricing',
+    quantity: 'Quantity',
+    subtotal: 'Subtotal:',
+    inStock: 'in stock',
+    adding: 'Adding...',
+    addToCart: 'Add to cart',
+    soldOut: 'Sold out',
+    save: 'Save',
+    relatedProducts: 'Related Products',
+    noImage: 'No Image',
+});
+
+const translated = ref<Record<string, string>>({});
+const translatedTabs = ref<Array<{id: string, label: string}>>([]);
+
+// Translate product data (bidirectional)
+const translateProductData = async () => {
+    // Translate product (bidirectional)
+    if (props.product) {
+        translatedProduct.value = {
+            ...props.product,
+            name: props.product.name ? await translateText(props.product.name, language.value, 'auto') : props.product.name,
+            short_description: props.product.short_description ? await translateText(props.product.short_description, language.value, 'auto') : props.product.short_description,
+            description: props.product.description ? await translateText(props.product.description, language.value, 'auto') : props.product.description,
+            ingredients: props.product.ingredients ? await translateText(props.product.ingredients, language.value, 'auto') : props.product.ingredients,
+            directions: props.product.directions ? await translateText(props.product.directions, language.value, 'auto') : props.product.directions,
+            warnings: props.product.warnings ? await translateText(props.product.warnings, language.value, 'auto') : props.product.warnings,
+            supplement_facts: props.product.supplement_facts ? await translateText(props.product.supplement_facts, language.value, 'auto') : props.product.supplement_facts,
+            brand: props.product.brand ? { ...props.product.brand, name: await translateText(props.product.brand.name, language.value, 'auto') } : props.product.brand,
+            category: props.product.category ? { ...props.product.category, name: await translateText(props.product.category.name, language.value, 'auto') } : props.product.category,
+        };
+    }
+
+    // Translate related products
+    translatedRelatedProducts.value = await Promise.all(
+        props.relatedProducts.map(async (product) => ({
+            ...product,
+            name: product.name ? await translateText(product.name, language.value, 'auto') : product.name,
+            short_description: product.short_description ? await translateText(product.short_description, language.value, 'auto') : product.short_description,
+            brand: product.brand ? { ...product.brand, name: await translateText(product.brand.name, language.value, 'auto') } : product.brand,
+        }))
+    );
+
+    // Translate tabs
+    translatedTabs.value = await Promise.all(
+        tabs.value.map(async (tab) => ({
+            ...tab,
+            label: await translateText(tab.label, language.value, 'auto'),
+        }))
+    );
+
+    // Translate static text
+    const keys = Object.keys(texts.value);
+    for (const key of keys) {
+        try {
+            translated.value[key] = await translateText(texts.value[key], language.value, 'auto');
+        } catch (error) {
+            translated.value[key] = texts.value[key];
+        }
+    }
+};
+
+watch(language, translateProductData, { immediate: true });
+watch(() => props.product, translateProductData, { deep: true });
+watch(() => props.relatedProducts, translateProductData, { deep: true });
+onMounted(translateProductData);
 
 const formatPrice = (price: number) => {
     return new Intl.NumberFormat('ja-JP', {
@@ -54,14 +144,15 @@ const formatPrice = (price: number) => {
 };
 
 const addToCart = () => {
-    if (!props.product.in_stock || quantity.value <= 0) {
+    const product = translatedProduct.value || props.product;
+    if (!product.in_stock || quantity.value <= 0) {
         return;
     }
 
     isAdding.value = true;
 
     router.post('/cart', {
-        product_id: props.product.id,
+        product_id: product.id,
         quantity: quantity.value,
     }, {
         preserveScroll: true,
@@ -97,7 +188,7 @@ const errorMessage = computed(() => {
 </script>
 
 <template>
-    <Head :title="`${product.name} - Nantosha Import & Export Division`" />
+    <Head :title="`${(translatedProduct || product).name} - Nantosha Import & Export Division`" />
     
     <div class="min-h-screen bg-white">
         <PublicNav />
@@ -107,11 +198,11 @@ const errorMessage = computed(() => {
             <!-- Product Header -->
             <div class="mb-8">
                 <h1 class="text-2xl md:text-3xl font-semibold text-gray-900 mb-3 tracking-tight">
-                    {{ product.name }}
+                    {{ (translatedProduct || product).name }}
                 </h1>
                 <p v-if="product.price_per_capsule || product.price_per_mg" class="text-base md:text-lg text-gray-600 mb-4">
                     <span v-if="product.price_per_capsule">
-                        Lowest Price: {{ formatPrice(product.price_per_capsule) }} per capsule
+                        {{ translated.lowestPrice || texts.lowestPrice }} {{ formatPrice(product.price_per_capsule) }} {{ translated.perCapsule || texts.perCapsule }}
                     </span>
                     <span v-if="product.price_per_capsule && product.price_per_mg"> (</span>
                     <span v-if="product.price_per_mg">
@@ -119,15 +210,15 @@ const errorMessage = computed(() => {
                     </span>
                     <span v-if="product.price_per_capsule && product.price_per_mg">)</span>
                 </p>
-                <p v-else-if="product.short_description" class="text-base md:text-lg text-gray-600 mb-4">
-                    {{ product.short_description }}
+                <p v-else-if="(translatedProduct || product).short_description" class="text-base md:text-lg text-gray-600 mb-4">
+                    {{ (translatedProduct || product).short_description }}
                 </p>
                 <p v-else-if="product.price" class="text-base md:text-lg text-gray-600 mb-4">
-                    Price: {{ formatPrice(product.sale_price || product.price) }}
+                    {{ translated.price || texts.price }} {{ formatPrice(product.sale_price || product.price) }}
                 </p>
                 <div class="flex items-center gap-2 text-gray-700">
                     <CheckCircle class="w-4 h-4" />
-                    <span class="text-sm font-medium">Verified by Japanese research institutions</span>
+                    <span class="text-sm font-medium">{{ translated.verified || texts.verified }}</span>
                 </div>
             </div>
 
@@ -141,14 +232,14 @@ const errorMessage = computed(() => {
                             <img
                                 v-if="currentImage"
                                 :src="currentImage"
-                                :alt="product.name"
+                                :alt="(translatedProduct || product).name"
                                 class="w-full h-full object-cover"
                             />
                             <div
                                 v-else
                                 class="w-full h-full flex items-center justify-center text-gray-400 bg-gray-100"
                             >
-                                No Image
+                                {{ translated.noImage || texts.noImage }}
                             </div>
                         </div>
                         
@@ -170,7 +261,7 @@ const errorMessage = computed(() => {
                             >
                                 <img
                                     :src="image"
-                                    :alt="`${product.name} - Image ${index + 1}`"
+                                    :alt="`${(translatedProduct || product).name} - Image ${index + 1}`"
                                     class="w-full h-full object-cover"
                                 />
                             </button>
@@ -183,7 +274,7 @@ const errorMessage = computed(() => {
                         <div class="border-b border-gray-200 dark:border-gray-700">
                             <div class="flex overflow-x-auto">
                                 <button
-                                    v-for="tab in tabs"
+                                    v-for="tab in (translatedTabs.length > 0 ? translatedTabs : tabs)"
                                     :key="tab.id"
                                     @click="activeTab = tab.id"
                                     :class="[
@@ -202,25 +293,25 @@ const errorMessage = computed(() => {
                         <div class="p-6">
                             <!-- Product Overview -->
                             <div v-if="activeTab === 'overview'">
-                                <div v-if="product.description" class="text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-line">
-                                    {{ product.description }}
+                                <div v-if="(translatedProduct || product).description" class="text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-line">
+                                    {{ (translatedProduct || product).description }}
                                 </div>
-                                <div v-else-if="product.short_description" class="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-                                    {{ product.short_description }}
+                                <div v-else-if="(translatedProduct || product).short_description" class="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+                                    {{ (translatedProduct || product).short_description }}
                                 </div>
                                 <div v-else class="text-sm text-gray-500 dark:text-gray-400 italic">
-                                    No product overview available.
+                                    {{ translated.noOverview || texts.noOverview }}
                                 </div>
                             </div>
 
                             <!-- Product Features -->
                             <div v-if="activeTab === 'features'">
-                                <div v-if="product.supplement_facts" class="text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-line">
-                                    {{ product.supplement_facts }}
+                                <div v-if="(translatedProduct || product).supplement_facts" class="text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-line">
+                                    {{ (translatedProduct || product).supplement_facts }}
                                 </div>
                                 <div v-else class="space-y-4">
                                     <div v-if="product.brand" class="pb-4 border-b border-gray-100 dark:border-gray-700">
-                                        <h4 class="font-semibold text-gray-900 dark:text-white mb-2">Brand</h4>
+                                        <h4 class="font-semibold text-gray-900 dark:text-white mb-2">{{ translated.brand || texts.brand }}</h4>
                                         <p class="text-sm text-gray-700 dark:text-gray-300">{{ product.brand.name }}</p>
                                         <p v-if="product.brand.description" class="text-sm text-gray-600 dark:text-gray-400 mt-2">
                                             {{ product.brand.description }}
@@ -228,11 +319,11 @@ const errorMessage = computed(() => {
                                     </div>
                                     <div class="grid grid-cols-2 gap-4">
                                         <div v-if="product.country_of_origin" class="pb-4 border-b border-gray-100 dark:border-gray-700">
-                                            <h4 class="font-semibold text-gray-900 dark:text-white mb-1 text-xs">Country of Origin</h4>
+                                            <h4 class="font-semibold text-gray-900 dark:text-white mb-1 text-xs">{{ translated.countryOfOrigin || texts.countryOfOrigin }}</h4>
                                             <p class="text-sm text-gray-700 dark:text-gray-300">{{ product.country_of_origin }}</p>
                                         </div>
                                         <div v-if="product.manufacturer" class="pb-4 border-b border-gray-100 dark:border-gray-700">
-                                            <h4 class="font-semibold text-gray-900 dark:text-white mb-1 text-xs">Manufacturer</h4>
+                                            <h4 class="font-semibold text-gray-900 dark:text-white mb-1 text-xs">{{ translated.manufacturer || texts.manufacturer }}</h4>
                                             <p class="text-sm text-gray-700 dark:text-gray-300">{{ product.manufacturer }}</p>
                                         </div>
                                         <div v-if="product.sku" class="pb-4 border-b border-gray-100 dark:border-gray-700">
@@ -240,14 +331,14 @@ const errorMessage = computed(() => {
                                             <p class="text-sm text-gray-700 dark:text-gray-300">{{ product.sku }}</p>
                                         </div>
                                         <div v-if="product.category" class="pb-4 border-b border-gray-100 dark:border-gray-700">
-                                            <h4 class="font-semibold text-gray-900 dark:text-white mb-1 text-xs">Category</h4>
+                                            <h4 class="font-semibold text-gray-900 dark:text-white mb-1 text-xs">{{ translated.category || texts.category }}</h4>
                                             <p class="text-sm text-gray-700 dark:text-gray-300">{{ product.category.name }}</p>
                                         </div>
                                     </div>
                                     <div class="pt-4">
                                         <p class="text-xs text-gray-600 dark:text-gray-400 flex items-center gap-2">
                                             <CheckCircle class="w-3 h-3 text-gray-700 dark:text-gray-300" />
-                                            Verified by Japanese research institutions
+                                            {{ translated.verified || texts.verified }}
                                         </p>
                                     </div>
                                 </div>
@@ -255,9 +346,9 @@ const errorMessage = computed(() => {
 
                             <!-- Ingredients -->
                             <div v-if="activeTab === 'ingredients'">
-                                <div v-if="product.ingredients" class="space-y-3">
+                                <div v-if="(translatedProduct || product).ingredients" class="space-y-3">
                                     <div
-                                        v-for="(line, index) in product.ingredients.split('\n').filter((l: string) => l.trim())"
+                                        v-for="(line, index) in (translatedProduct || product).ingredients.split('\n').filter((l: string) => l.trim())"
                                         :key="index"
                                         class="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700 last:border-b-0"
                                     >
@@ -269,32 +360,32 @@ const errorMessage = computed(() => {
                                     <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
                                         <p class="text-xs text-gray-600 dark:text-gray-400 flex items-center gap-2">
                                             <CheckCircle class="w-3 h-3 text-gray-700 dark:text-gray-300" />
-                                            Verified by Japanese research institutions
+                                            {{ translated.verified || texts.verified }}
                                         </p>
                                     </div>
                                 </div>
                                 <div v-else class="text-sm text-gray-500 dark:text-gray-400 italic">
-                                    No ingredients information available.
+                                    {{ translated.noIngredients || texts.noIngredients }}
                                 </div>
                             </div>
 
                             <!-- Dosage/Suggested Use -->
                             <div v-if="activeTab === 'dosage'">
-                                <div v-if="product.directions" class="text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-line">
-                                    {{ product.directions }}
+                                <div v-if="(translatedProduct || product).directions" class="text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-line">
+                                    {{ (translatedProduct || product).directions }}
                                 </div>
                                 <div v-else class="text-sm text-gray-500 dark:text-gray-400 italic">
-                                    No dosage information available.
+                                    {{ translated.noDosage || texts.noDosage }}
                                 </div>
                             </div>
 
                             <!-- Warnings -->
                             <div v-if="activeTab === 'warnings'">
-                                <div v-if="product.warnings" class="text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-line">
-                                    {{ product.warnings }}
+                                <div v-if="(translatedProduct || product).warnings" class="text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-line">
+                                    {{ (translatedProduct || product).warnings }}
                                 </div>
-                                <div v-else-if="product.supplement_facts" class="text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-line">
-                                    {{ product.supplement_facts }}
+                                <div v-else-if="(translatedProduct || product).supplement_facts" class="text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-line">
+                                    {{ (translatedProduct || product).supplement_facts }}
                                 </div>
                                 <div v-else class="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
                                     <p class="mb-4">
@@ -319,7 +410,7 @@ const errorMessage = computed(() => {
                 <!-- Sidebar: Pricing & Order -->
                 <div class="lg:col-span-1">
                     <div class="bg-white border border-gray-200 p-6 sticky top-20">
-                        <h2 class="text-lg font-semibold text-gray-900 mb-6 tracking-tight">Pricing</h2>
+                        <h2 class="text-lg font-semibold text-gray-900 mb-6 tracking-tight">{{ translated.pricing || texts.pricing }}</h2>
                         
                         <!-- Price Display -->
                         <div class="mb-6">
@@ -335,13 +426,13 @@ const errorMessage = computed(() => {
                                 </span>
                             </div>
                             <p v-if="product.sale_price" class="text-sm text-green-600 font-medium">
-                                Save {{ formatPrice(product.price - product.sale_price) }}
+                                {{ translated.save || texts.save }} {{ formatPrice(product.price - product.sale_price) }}
                             </p>
                         </div>
 
                         <!-- Quantity Selector -->
                         <div class="mb-6">
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Quantity</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">{{ translated.quantity || texts.quantity }}</label>
                             <input
                                 v-model.number="quantity"
                                 type="number"
@@ -354,11 +445,11 @@ const errorMessage = computed(() => {
                         <div class="bg-gray-50 border border-gray-200 p-4 mb-6">
                             <div class="text-sm text-gray-600 space-y-1">
                                 <div class="flex justify-between">
-                                    <span>Subtotal:</span>
+                                    <span>{{ translated.subtotal || texts.subtotal }}</span>
                                     <span class="font-semibold">{{ formatPrice((product.sale_price || product.price) * quantity) }}</span>
                                 </div>
                                 <div v-if="product.stock_quantity" class="text-xs text-gray-500">
-                                    {{ product.stock_quantity }} in stock
+                                    {{ product.stock_quantity }} {{ translated.inStock || texts.inStock }}
                                 </div>
                             </div>
                         </div>
@@ -377,7 +468,7 @@ const errorMessage = computed(() => {
                             :disabled="!product.in_stock || quantity <= 0 || isAdding"
                             class="w-full bg-black text-white py-3 text-sm font-medium hover:bg-gray-800 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed disabled:hover:bg-gray-300 mb-4 uppercase tracking-wide"
                         >
-                            {{ isAdding ? 'Adding...' : (product.in_stock ? 'Add to cart' : 'Sold out') }}
+                            {{ isAdding ? (translated.adding || texts.adding) : (product.in_stock ? (translated.addToCart || texts.addToCart) : (translated.soldOut || texts.soldOut)) }}
                         </button>
                     </div>
                 </div>
@@ -385,15 +476,15 @@ const errorMessage = computed(() => {
             
             <!-- Related Products -->
             <div
-                v-if="relatedProducts.length > 0"
+                v-if="(translatedRelatedProducts.length > 0 ? translatedRelatedProducts : relatedProducts).length > 0"
                 class="mt-12 pt-12 border-t border-gray-200"
             >
                 <h2 class="text-xl md:text-2xl font-semibold text-gray-900 mb-6 tracking-tight">
-                    Related Products
+                    {{ translated.relatedProducts || texts.relatedProducts }}
                 </h2>
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     <ProductCard
-                        v-for="relatedProduct in relatedProducts"
+                        v-for="relatedProduct in (translatedRelatedProducts.length > 0 ? translatedRelatedProducts : relatedProducts)"
                         :key="relatedProduct.id"
                         :product="relatedProduct"
                     />
