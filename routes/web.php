@@ -51,6 +51,7 @@ Route::get('/how-to-order', [HowToOrderController::class, 'index'])->name('how-t
 Route::get('/faq', [FAQController::class, 'index'])->name('faq');
 Route::get('/contact', [ContactController::class, 'index'])->name('contact');
 Route::post('/contact', [ContactController::class, 'store'])->name('contact.store');
+Route::get('/corporate-profile', [ContactController::class, 'corporateProfile'])->name('corporate-profile');
 
 // Dashboard
 Route::get('dashboard', [DashboardController::class, 'index'])->middleware(['auth', 'verified'])->name('dashboard');

@@ -31,4 +31,9 @@ class ContactController extends Controller
         // For now, we'll just return a success response
         return back()->with('success', 'Thank you for your message. We will get back to you soon.');
     }
+
+    public function corporateProfile()
+    {
+        return Inertia::render('CorporateProfile');
+    }
 }

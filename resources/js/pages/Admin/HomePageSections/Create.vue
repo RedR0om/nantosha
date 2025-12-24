@@ -35,7 +35,45 @@ const steps = ref<Array<{number: number, title: string, description: string}>>([
 const linkText = ref('');
 const linkHref = ref('');
 
-const iconOptions = ['CheckCircle', 'Shield', 'Award', 'Package'];
+// Custom section data
+const customContent = ref({
+    html_content: '',
+    image_url: '',
+    image_alt: '',
+    text_blocks: [] as Array<{title: string, content: string, alignment: string}>,
+    buttons: [] as Array<{text: string, href: string, style: string, icon: string}>,
+    lists: [] as Array<{title: string, items: string[], style: string}>,
+    grid_items: [] as Array<{title: string, description: string, image_url: string, link: string, icon: string}>,
+    badges: [] as Array<{text: string, icon: string}>,
+    features: [] as Array<{icon: string, title: string, description: string}>,
+    ingredients: [] as Array<{name: string, amount: string}>,
+    details: [] as Array<{label: string, value: string}>,
+    pricing_tiers: [] as Array<{qty: number, price: number, perCap: number}>,
+    pricing_note: '',
+    steps: [] as Array<{number: number, title: string, description: string}>,
+    step_link_text: '',
+    step_link_href: '',
+    custom_css: '',
+    spacing: 'normal',
+    max_width: 'full',
+    text_alignment: 'left'
+});
+
+const iconOptions = [
+    'CheckCircle', 'Shield', 'Award', 'Package', 'Star', 'Heart', 
+    'Check', 'X', 'AlertCircle', 'Info', 'TrendingUp', 'Zap', 
+    'Truck', 'Clock', 'Globe', 'Lock', 'Unlock', 'Settings', 
+    'Bell', 'Mail', 'Phone', 'MapPin', 'Calendar', 'FileText', 
+    'ShoppingCart', 'CreditCard', 'DollarSign', 'ThumbsUp', 
+    'ThumbsDown', 'Eye', 'EyeOff', 'Search', 'Filter', 'Menu', 
+    'ArrowRight', 'ArrowLeft', 'ArrowUp', 'ArrowDown', 'ChevronRight', 
+    'ChevronLeft', 'Plus', 'Minus', 'Edit', 'Trash', 'Save', 
+    'Download', 'Upload', 'Share', 'Copy', 'Link', 'ExternalLink',
+    'Home', 'User', 'Users', 'MessageSquare', 'Send', 'Image',
+    'Video', 'Music', 'Book', 'BookOpen', 'GraduationCap', 'Briefcase',
+    'Activity', 'BarChart', 'PieChart', 'LineChart', 'Database',
+    'Server', 'Cloud', 'Wifi', 'Bluetooth', 'Battery', 'Power'
+];
 
 // Build content object from form data
 const buildContent = () => {
@@ -66,6 +104,8 @@ const buildContent = () => {
                 linkText: linkText.value,
                 linkHref: linkHref.value
             };
+        case 'custom':
+            return customContent.value;
         default:
             return {};
     }
@@ -95,6 +135,33 @@ const removeStep = (index: number) => {
     steps.value.forEach((step, idx) => step.number = idx + 1);
 };
 
+// Custom section functions
+const addTextBlock = () => customContent.value.text_blocks.push({ title: '', content: '', alignment: 'left' });
+const removeTextBlock = (index: number) => customContent.value.text_blocks.splice(index, 1);
+const addCustomButton = () => customContent.value.buttons.push({ text: '', href: '', style: 'primary', icon: '' });
+const removeCustomButton = (index: number) => customContent.value.buttons.splice(index, 1);
+const addList = () => customContent.value.lists.push({ title: '', items: [''], style: 'bullet' });
+const removeList = (index: number) => customContent.value.lists.splice(index, 1);
+const addListItem = (listIndex: number) => customContent.value.lists[listIndex].items.push('');
+const removeListItem = (listIndex: number, itemIndex: number) => customContent.value.lists[listIndex].items.splice(itemIndex, 1);
+const addGridItem = () => customContent.value.grid_items.push({ title: '', description: '', image_url: '', link: '', icon: '' });
+const removeGridItem = (index: number) => customContent.value.grid_items.splice(index, 1);
+const addCustomBadge = () => customContent.value.badges.push({ text: '', icon: 'CheckCircle' });
+const removeCustomBadge = (index: number) => customContent.value.badges.splice(index, 1);
+const addCustomFeature = () => customContent.value.features.push({ icon: 'Shield', title: '', description: '' });
+const removeCustomFeature = (index: number) => customContent.value.features.splice(index, 1);
+const addCustomIngredient = () => customContent.value.ingredients.push({ name: '', amount: '' });
+const removeCustomIngredient = (index: number) => customContent.value.ingredients.splice(index, 1);
+const addCustomDetail = () => customContent.value.details.push({ label: '', value: '' });
+const removeCustomDetail = (index: number) => customContent.value.details.splice(index, 1);
+const addCustomPricingTier = () => customContent.value.pricing_tiers.push({ qty: 0, price: 0, perCap: 0 });
+const removeCustomPricingTier = (index: number) => customContent.value.pricing_tiers.splice(index, 1);
+const addCustomStep = () => customContent.value.steps.push({ number: customContent.value.steps.length + 1, title: '', description: '' });
+const removeCustomStep = (index: number) => {
+    customContent.value.steps.splice(index, 1);
+    customContent.value.steps.forEach((step, idx) => step.number = idx + 1);
+};
+
 // Reset data when section type changes
 watch(() => form.type, () => {
     heroBadges.value = [];
@@ -108,6 +175,28 @@ watch(() => form.type, () => {
     steps.value = [];
     linkText.value = '';
     linkHref.value = '';
+    customContent.value = {
+        html_content: '',
+        image_url: '',
+        image_alt: '',
+        text_blocks: [],
+        buttons: [],
+        lists: [],
+        grid_items: [],
+        badges: [],
+        features: [],
+        ingredients: [],
+        details: [],
+        pricing_tiers: [],
+        pricing_note: '',
+        steps: [],
+        step_link_text: '',
+        step_link_href: '',
+        custom_css: '',
+        spacing: 'normal',
+        max_width: 'full',
+        text_alignment: 'left'
+    };
 });
 
 const submit = () => {
@@ -155,7 +244,7 @@ const submit = () => {
                             </label>
                             <select
                                 v-model="form.type"
-                                class="w-full border border-gray-300 px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:border-gray-900 rounded-lg"
+                                class="w-full border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-800 focus:outline-none focus:border-gray-900 dark:focus:border-gray-600 rounded-lg"
                             >
                                 <optgroup label="Content Sections">
                                     <option value="hero">Hero</option>
@@ -194,7 +283,7 @@ const submit = () => {
                             <input
                                 v-model="form.title"
                                 type="text"
-                                class="w-full border border-gray-300 px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:border-gray-900 rounded-lg"
+                                class="w-full border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-800 focus:outline-none focus:border-gray-900 dark:focus:border-gray-600 rounded-lg"
                                 placeholder="e.g., Nantosha Import & Export Division"
                             />
                             <p class="mt-1 text-xs text-gray-500">Content will be automatically translated to Japanese when viewed</p>
@@ -211,7 +300,7 @@ const submit = () => {
                             <textarea
                                 v-model="form.subtitle"
                                 rows="3"
-                                class="w-full border border-gray-300 px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:border-gray-900 rounded-lg"
+                                class="w-full border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-800 focus:outline-none focus:border-gray-900 dark:focus:border-gray-600 rounded-lg"
                                 placeholder="e.g., Genuine Ivermectin Capsules (15mg)"
                             ></textarea>
                             <p class="mt-1 text-xs text-gray-500">Content will be automatically translated to Japanese when viewed</p>
@@ -241,9 +330,9 @@ const submit = () => {
                                                 v-model="badge.text"
                                                 type="text"
                                                 placeholder="Badge text"
-                                                class="w-full border border-gray-300 px-3 py-2 text-sm rounded-lg mb-2"
+                                                class="w-full border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-800 rounded-lg mb-2"
                                             />
-                                            <select v-model="badge.icon" class="w-full border border-gray-300 px-3 py-2 text-sm rounded-lg">
+                                            <select v-model="badge.icon" class="w-full border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-800 rounded-lg">
                                                 <option v-for="icon in iconOptions" :key="icon" :value="icon">{{ icon }}</option>
                                             </select>
                                         </div>
@@ -268,13 +357,13 @@ const submit = () => {
                                                 v-model="button.text"
                                                 type="text"
                                                 placeholder="Button text"
-                                                class="w-full border border-gray-300 px-3 py-2 text-sm rounded-lg"
+                                                class="w-full border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-800 rounded-lg"
                                             />
                                             <input
                                                 v-model="button.href"
                                                 type="text"
                                                 placeholder="Link URL (e.g., /products)"
-                                                class="w-full border border-gray-300 px-3 py-2 text-sm rounded-lg"
+                                                class="w-full border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-800 rounded-lg"
                                             />
                                             <select v-model="button.style" class="w-full border border-gray-300 px-3 py-2 text-sm rounded-lg">
                                                 <option value="primary">Primary (Black)</option>
@@ -304,20 +393,20 @@ const submit = () => {
                                 </div>
                                 <div v-for="(item, index) in featuresItems" :key="index" class="flex gap-3 mb-3 p-3 bg-gray-50 rounded-lg">
                                     <div class="flex-1 space-y-2">
-                                        <select v-model="item.icon" class="w-full border border-gray-300 px-3 py-2 text-sm rounded-lg">
+                                        <select v-model="item.icon" class="w-full border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-800 rounded-lg">
                                             <option v-for="icon in iconOptions" :key="icon" :value="icon">{{ icon }}</option>
                                         </select>
                                         <input
                                             v-model="item.title"
                                             type="text"
                                             placeholder="Feature title"
-                                            class="w-full border border-gray-300 px-3 py-2 text-sm rounded-lg"
+                                            class="w-full border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-800 rounded-lg"
                                         />
                                         <textarea
                                             v-model="item.description"
                                             rows="2"
                                             placeholder="Feature description"
-                                            class="w-full border border-gray-300 px-3 py-2 text-sm rounded-lg"
+                                            class="w-full border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-800 rounded-lg"
                                         ></textarea>
                                     </div>
                                     <button type="button" @click="removeFeature(index)" class="self-start text-red-600 hover:text-red-800">
@@ -468,13 +557,13 @@ const submit = () => {
                                             v-model="step.title"
                                             type="text"
                                             placeholder="Step title"
-                                            class="w-full border border-gray-300 px-3 py-2 text-sm rounded-lg"
+                                            class="w-full border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-800 rounded-lg"
                                         />
                                         <textarea
                                             v-model="step.description"
                                             rows="2"
                                             placeholder="Step description"
-                                            class="w-full border border-gray-300 px-3 py-2 text-sm rounded-lg"
+                                            class="w-full border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-800 rounded-lg"
                                         ></textarea>
                                     </div>
                                     <button type="button" @click="removeStep(index)" class="self-start text-red-600 hover:text-red-800">
@@ -488,7 +577,7 @@ const submit = () => {
                                             v-model="linkText"
                                             type="text"
                                             placeholder="e.g., Learn more about the ordering process"
-                                            class="w-full border border-gray-300 px-3 py-2 text-sm rounded-lg"
+                                            class="w-full border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-800 rounded-lg"
                                         />
                                     </div>
                                     <div>
@@ -497,12 +586,494 @@ const submit = () => {
                                             v-model="linkHref"
                                             type="text"
                                             placeholder="e.g., /how-to-order"
-                                            class="w-full border border-gray-300 px-3 py-2 text-sm rounded-lg"
+                                            class="w-full border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-800 rounded-lg"
                                         />
                                     </div>
                                 </div>
                             </div>
 
+                        </template>
+
+                        <!-- Custom Section Content -->
+                        <template v-if="form.type === 'custom'">
+                            <div class="border-t border-gray-200 dark:border-gray-700 pt-6">
+                                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Custom Section Content</h3>
+                                <p class="text-xs text-gray-500 dark:text-gray-400 mb-6">Create fully customizable content with flexible layout options. Content will be automatically translated to Japanese when viewed.</p>
+                                
+                                <!-- Layout Settings -->
+                                <div class="mb-6 p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                                    <h4 class="text-sm font-semibold text-gray-900 dark:text-white mb-3">Layout Settings</h4>
+                                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        <div>
+                                            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Max Width</label>
+                                            <select v-model="customContent.max_width" class="w-full border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-800 rounded-lg">
+                                                <option value="full">Full Width</option>
+                                                <option value="7xl">7xl (1280px)</option>
+                                                <option value="6xl">6xl (1152px)</option>
+                                                <option value="5xl">5xl (1024px)</option>
+                                                <option value="4xl">4xl (896px)</option>
+                                                <option value="3xl">3xl (768px)</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Text Alignment</label>
+                                            <select v-model="customContent.text_alignment" class="w-full border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-800 rounded-lg">
+                                                <option value="left">Left</option>
+                                                <option value="center">Center</option>
+                                                <option value="right">Right</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Spacing</label>
+                                            <select v-model="customContent.spacing" class="w-full border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-800 rounded-lg">
+                                                <option value="tight">Tight</option>
+                                                <option value="normal">Normal</option>
+                                                <option value="loose">Loose</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Main Image -->
+                                <div class="mb-6">
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Main Image (Optional)</label>
+                                    <input
+                                        v-model="customContent.image_url"
+                                        type="text"
+                                        placeholder="Image URL (e.g., https://example.com/image.jpg)"
+                                        class="w-full border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-800 rounded-lg mb-2"
+                                    />
+                                    <input
+                                        v-model="customContent.image_alt"
+                                        type="text"
+                                        placeholder="Image Alt Text"
+                                        class="w-full border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-800 rounded-lg"
+                                    />
+                                </div>
+
+                                <!-- HTML Content -->
+                                <div class="mb-6">
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                        HTML Content (Optional)
+                                        <span class="text-xs text-gray-500 dark:text-gray-400 ml-1">- For advanced users</span>
+                                    </label>
+                                    <textarea
+                                        v-model="customContent.html_content"
+                                        rows="6"
+                                        placeholder="Enter raw HTML content here..."
+                                        class="w-full border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-800 rounded-lg font-mono"
+                                    ></textarea>
+                                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">This will be rendered as-is. Use with caution.</p>
+                                </div>
+
+                                <!-- Text Blocks -->
+                                <div class="mb-6">
+                                    <div class="flex items-center justify-between mb-3">
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Text Blocks</label>
+                                        <button type="button" @click="addTextBlock" class="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400">
+                                            <Plus class="w-4 h-4" />
+                                            Add Text Block
+                                        </button>
+                                    </div>
+                                    <div v-for="(block, index) in customContent.text_blocks" :key="index" class="mb-4 p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                                        <div class="flex items-center justify-between mb-3">
+                                            <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Text Block {{ index + 1 }}</span>
+                                            <button type="button" @click="removeTextBlock(index)" class="text-red-600 hover:text-red-800 dark:text-red-400">
+                                                <X class="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                        <input
+                                            v-model="block.title"
+                                            type="text"
+                                            placeholder="Block Title (Optional)"
+                                            class="w-full border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-800 rounded-lg mb-2"
+                                        />
+                                        <textarea
+                                            v-model="block.content"
+                                            rows="3"
+                                            placeholder="Block content text..."
+                                            class="w-full border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-800 rounded-lg mb-2"
+                                        ></textarea>
+                                        <select v-model="block.alignment" class="w-full border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-800 rounded-lg">
+                                            <option value="left">Left Aligned</option>
+                                            <option value="center">Center Aligned</option>
+                                            <option value="right">Right Aligned</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <!-- Buttons/CTAs -->
+                                <div class="mb-6">
+                                    <div class="flex items-center justify-between mb-3">
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Call-to-Action Buttons</label>
+                                        <button type="button" @click="addCustomButton" class="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400">
+                                            <Plus class="w-4 h-4" />
+                                            Add Button
+                                        </button>
+                                    </div>
+                                    <div v-for="(button, index) in customContent.buttons" :key="index" class="mb-3 p-3 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                                        <div class="flex gap-3">
+                                            <div class="flex-1 space-y-2">
+                                                <input
+                                                    v-model="button.text"
+                                                    type="text"
+                                                    placeholder="Button Text"
+                                                    class="w-full border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-800 rounded-lg"
+                                                />
+                                                <input
+                                                    v-model="button.href"
+                                                    type="text"
+                                                    placeholder="Link URL (e.g., /products or https://example.com)"
+                                                    class="w-full border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-800 rounded-lg"
+                                                />
+                                                <div class="grid grid-cols-2 gap-2">
+                                                    <select v-model="button.style" class="w-full border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-800 rounded-lg">
+                                                        <option value="primary">Primary (Black)</option>
+                                                        <option value="secondary">Secondary (White)</option>
+                                                        <option value="outline">Outline</option>
+                                                        <option value="ghost">Ghost</option>
+                                                    </select>
+                                                    <select v-model="button.icon" class="w-full border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-800 rounded-lg">
+                                                        <option value="">No Icon</option>
+                                                        <option v-for="icon in iconOptions" :key="icon" :value="icon">{{ icon }}</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            <button type="button" @click="removeCustomButton(index)" class="self-start text-red-600 hover:text-red-800 dark:text-red-400">
+                                                <X class="w-5 h-5" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Lists -->
+                                <div class="mb-6">
+                                    <div class="flex items-center justify-between mb-3">
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Lists</label>
+                                        <button type="button" @click="addList" class="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400">
+                                            <Plus class="w-4 h-4" />
+                                            Add List
+                                        </button>
+                                    </div>
+                                    <div v-for="(list, listIndex) in customContent.lists" :key="listIndex" class="mb-4 p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                                        <div class="flex items-center justify-between mb-3">
+                                            <span class="text-sm font-medium text-gray-700 dark:text-gray-300">List {{ listIndex + 1 }}</span>
+                                            <button type="button" @click="removeList(listIndex)" class="text-red-600 hover:text-red-800 dark:text-red-400">
+                                                <X class="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                        <input
+                                            v-model="list.title"
+                                            type="text"
+                                            placeholder="List Title (Optional)"
+                                            class="w-full border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-800 rounded-lg mb-2"
+                                        />
+                                        <select v-model="list.style" class="w-full border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-800 rounded-lg mb-2">
+                                            <option value="bullet">Bullet Points</option>
+                                            <option value="numbered">Numbered</option>
+                                            <option value="check">Checkmarks</option>
+                                        </select>
+                                        <div class="space-y-2">
+                                            <div v-for="(item, itemIndex) in list.items" :key="itemIndex" class="flex gap-2">
+                                                <input
+                                                    v-model="list.items[itemIndex]"
+                                                    type="text"
+                                                    :placeholder="`List item ${itemIndex + 1}`"
+                                                    class="flex-1 border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-800 rounded-lg"
+                                                />
+                                                <button type="button" @click="removeListItem(listIndex, itemIndex)" class="text-red-600 hover:text-red-800 dark:text-red-400">
+                                                    <X class="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                            <button type="button" @click="addListItem(listIndex)" class="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400">
+                                                + Add Item
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Grid Items -->
+                                <div class="mb-6">
+                                    <div class="flex items-center justify-between mb-3">
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Grid Items</label>
+                                        <button type="button" @click="addGridItem" class="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400">
+                                            <Plus class="w-4 h-4" />
+                                            Add Grid Item
+                                        </button>
+                                    </div>
+                                    <div v-for="(item, index) in customContent.grid_items" :key="index" class="mb-4 p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                                        <div class="flex items-center justify-between mb-3">
+                                            <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Grid Item {{ index + 1 }}</span>
+                                            <button type="button" @click="removeGridItem(index)" class="text-red-600 hover:text-red-800 dark:text-red-400">
+                                                <X class="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                        <div class="space-y-2">
+                                            <input
+                                                v-model="item.title"
+                                                type="text"
+                                                placeholder="Item Title"
+                                                class="w-full border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-800 rounded-lg"
+                                            />
+                                            <textarea
+                                                v-model="item.description"
+                                                rows="2"
+                                                placeholder="Item Description"
+                                                class="w-full border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-800 rounded-lg"
+                                            ></textarea>
+                                            <input
+                                                v-model="item.image_url"
+                                                type="text"
+                                                placeholder="Image URL (Optional)"
+                                                class="w-full border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-800 rounded-lg"
+                                            />
+                                            <div class="grid grid-cols-2 gap-2">
+                                                <input
+                                                    v-model="item.link"
+                                                    type="text"
+                                                    placeholder="Link URL (Optional)"
+                                                    class="w-full border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-800 rounded-lg"
+                                                />
+                                                <select v-model="item.icon" class="w-full border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-800 rounded-lg">
+                                                    <option value="">No Icon</option>
+                                                    <option v-for="icon in iconOptions" :key="icon" :value="icon">{{ icon }}</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Badges -->
+                                <div class="mb-6">
+                                    <div class="flex items-center justify-between mb-3">
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Badges</label>
+                                        <button type="button" @click="addCustomBadge" class="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400">
+                                            <Plus class="w-4 h-4" />
+                                            Add Badge
+                                        </button>
+                                    </div>
+                                    <div v-for="(badge, index) in customContent.badges" :key="index" class="mb-3 p-3 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                                        <div class="flex gap-3">
+                                            <div class="flex-1 space-y-2">
+                                                <input
+                                                    v-model="badge.text"
+                                                    type="text"
+                                                    placeholder="Badge text"
+                                                    class="w-full border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-800 rounded-lg"
+                                                />
+                                                <select v-model="badge.icon" class="w-full border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-800 rounded-lg">
+                                                    <option v-for="icon in iconOptions" :key="icon" :value="icon">{{ icon }}</option>
+                                                </select>
+                                            </div>
+                                            <button type="button" @click="removeCustomBadge(index)" class="self-start text-red-600 hover:text-red-800 dark:text-red-400">
+                                                <X class="w-5 h-5" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Features -->
+                                <div class="mb-6">
+                                    <div class="flex items-center justify-between mb-3">
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Features</label>
+                                        <button type="button" @click="addCustomFeature" class="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400">
+                                            <Plus class="w-4 h-4" />
+                                            Add Feature
+                                        </button>
+                                    </div>
+                                    <div v-for="(feature, index) in customContent.features" :key="index" class="mb-3 p-3 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                                        <div class="flex gap-3">
+                                            <div class="flex-1 space-y-2">
+                                                <select v-model="feature.icon" class="w-full border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-800 rounded-lg">
+                                                    <option v-for="icon in iconOptions" :key="icon" :value="icon">{{ icon }}</option>
+                                                </select>
+                                                <input
+                                                    v-model="feature.title"
+                                                    type="text"
+                                                    placeholder="Feature title"
+                                                    class="w-full border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-800 rounded-lg"
+                                                />
+                                                <textarea
+                                                    v-model="feature.description"
+                                                    rows="2"
+                                                    placeholder="Feature description"
+                                                    class="w-full border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-800 rounded-lg"
+                                                ></textarea>
+                                            </div>
+                                            <button type="button" @click="removeCustomFeature(index)" class="self-start text-red-600 hover:text-red-800 dark:text-red-400">
+                                                <X class="w-5 h-5" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Ingredients -->
+                                <div class="mb-6">
+                                    <div class="flex items-center justify-between mb-3">
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Ingredients</label>
+                                        <button type="button" @click="addCustomIngredient" class="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400">
+                                            <Plus class="w-4 h-4" />
+                                            Add Ingredient
+                                        </button>
+                                    </div>
+                                    <div v-for="(ingredient, index) in customContent.ingredients" :key="index" class="mb-2 flex gap-2">
+                                        <input
+                                            v-model="ingredient.name"
+                                            type="text"
+                                            placeholder="Ingredient name"
+                                            class="flex-1 border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-800 rounded-lg"
+                                        />
+                                        <input
+                                            v-model="ingredient.amount"
+                                            type="text"
+                                            placeholder="Amount (e.g., 14.85mg)"
+                                            class="w-32 border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-800 rounded-lg"
+                                        />
+                                        <button type="button" @click="removeCustomIngredient(index)" class="text-red-600 hover:text-red-800 dark:text-red-400">
+                                            <X class="w-5 h-5" />
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Details -->
+                                <div class="mb-6">
+                                    <div class="flex items-center justify-between mb-3">
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Details</label>
+                                        <button type="button" @click="addCustomDetail" class="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400">
+                                            <Plus class="w-4 h-4" />
+                                            Add Detail
+                                        </button>
+                                    </div>
+                                    <div v-for="(detail, index) in customContent.details" :key="index" class="mb-2 flex gap-2">
+                                        <input
+                                            v-model="detail.label"
+                                            type="text"
+                                            placeholder="Label (e.g., Country of Origin)"
+                                            class="flex-1 border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-800 rounded-lg"
+                                        />
+                                        <input
+                                            v-model="detail.value"
+                                            type="text"
+                                            placeholder="Value"
+                                            class="flex-1 border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-800 rounded-lg"
+                                        />
+                                        <button type="button" @click="removeCustomDetail(index)" class="text-red-600 hover:text-red-800 dark:text-red-400">
+                                            <X class="w-5 h-5" />
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Pricing Tiers -->
+                                <div class="mb-6">
+                                    <div class="flex items-center justify-between mb-3">
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Pricing Tiers</label>
+                                        <button type="button" @click="addCustomPricingTier" class="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400">
+                                            <Plus class="w-4 h-4" />
+                                            Add Tier
+                                        </button>
+                                    </div>
+                                    <div v-for="(tier, index) in customContent.pricing_tiers" :key="index" class="mb-2 flex gap-2">
+                                        <input
+                                            v-model.number="tier.qty"
+                                            type="number"
+                                            placeholder="Quantity"
+                                            class="w-24 border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-800 rounded-lg"
+                                        />
+                                        <input
+                                            v-model.number="tier.price"
+                                            type="number"
+                                            placeholder="Total Price (JPY)"
+                                            class="flex-1 border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-800 rounded-lg"
+                                        />
+                                        <input
+                                            v-model.number="tier.perCap"
+                                            type="number"
+                                            placeholder="Per Cap (JPY)"
+                                            class="w-32 border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-800 rounded-lg"
+                                        />
+                                        <button type="button" @click="removeCustomPricingTier(index)" class="text-red-600 hover:text-red-800 dark:text-red-400">
+                                            <X class="w-5 h-5" />
+                                        </button>
+                                    </div>
+                                    <div class="mt-4">
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Pricing Note</label>
+                                        <textarea
+                                            v-model="customContent.pricing_note"
+                                            rows="2"
+                                            placeholder="Additional note about pricing"
+                                            class="w-full border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-800 rounded-lg"
+                                        ></textarea>
+                                    </div>
+                                </div>
+
+                                <!-- Steps (How It Works) -->
+                                <div class="mb-6">
+                                    <div class="flex items-center justify-between mb-3">
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Steps</label>
+                                        <button type="button" @click="addCustomStep" class="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400">
+                                            <Plus class="w-4 h-4" />
+                                            Add Step
+                                        </button>
+                                    </div>
+                                    <div v-for="(step, index) in customContent.steps" :key="index" class="mb-3 p-3 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                                        <div class="flex gap-3">
+                                            <div class="flex-1 space-y-2">
+                                                <div class="text-sm font-medium text-gray-700 dark:text-gray-300">Step {{ step.number }}</div>
+                                                <input
+                                                    v-model="step.title"
+                                                    type="text"
+                                                    placeholder="Step title"
+                                                    class="w-full border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-800 rounded-lg"
+                                                />
+                                                <textarea
+                                                    v-model="step.description"
+                                                    rows="2"
+                                                    placeholder="Step description"
+                                                    class="w-full border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-800 rounded-lg"
+                                                ></textarea>
+                                            </div>
+                                            <button type="button" @click="removeCustomStep(index)" class="self-start text-red-600 hover:text-red-800 dark:text-red-400">
+                                                <X class="w-5 h-5" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="mt-4 space-y-3">
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Learn More Link Text</label>
+                                            <input
+                                                v-model="customContent.step_link_text"
+                                                type="text"
+                                                placeholder="e.g., Learn more about the ordering process"
+                                                class="w-full border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-800 rounded-lg"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Learn More Link URL</label>
+                                            <input
+                                                v-model="customContent.step_link_href"
+                                                type="text"
+                                                placeholder="e.g., /how-to-order"
+                                                class="w-full border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-800 rounded-lg"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Custom CSS -->
+                                <div class="mb-6">
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                        Custom CSS (Optional)
+                                        <span class="text-xs text-gray-500 dark:text-gray-400 ml-1">- For advanced styling</span>
+                                    </label>
+                                    <textarea
+                                        v-model="customContent.custom_css"
+                                        rows="4"
+                                        placeholder=".custom-class { color: #000; }"
+                                        class="w-full border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-800 rounded-lg font-mono"
+                                    ></textarea>
+                                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Add custom CSS classes or inline styles. Use with caution.</p>
+                                </div>
+                            </div>
                         </template>
 
                         <!-- Background Color -->
@@ -512,7 +1083,7 @@ const submit = () => {
                             </label>
                             <select
                                 v-model="form.background_color"
-                                class="w-full border border-gray-300 px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:border-gray-900 rounded-lg"
+                                class="w-full border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-800 focus:outline-none focus:border-gray-900 dark:focus:border-gray-600 rounded-lg"
                             >
                                 <option value="white">White</option>
                                 <option value="gray-50">Gray (Light)</option>
@@ -531,7 +1102,7 @@ const submit = () => {
                                 v-model.number="form.sort_order"
                                 type="number"
                                 min="0"
-                                class="w-full border border-gray-300 px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:border-gray-900 rounded-lg"
+                                class="w-full border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-800 focus:outline-none focus:border-gray-900 dark:focus:border-gray-600 rounded-lg"
                             />
                             <p class="mt-1 text-xs text-gray-500">Lower numbers appear first</p>
                             <p v-if="form.errors.sort_order" class="mt-1 text-xs text-red-600">

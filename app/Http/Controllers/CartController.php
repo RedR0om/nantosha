@@ -6,6 +6,7 @@ use App\Models\CartItem;
 use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class CartController extends Controller
@@ -74,19 +75,46 @@ class CartController extends Controller
             }
             
             // Match variant if provided, otherwise match null/empty variants
-            // PostgreSQL requires explicit casting for JSON comparisons
+            // Use database-specific syntax based on driver
+            $driver = DB::connection()->getDriverName();
+            $isPostgreSQL = $driver === 'pgsql';
+            $isMySQL = in_array($driver, ['mysql', 'mariadb']);
+            
             if ($variant && is_array($variant) && count($variant) > 0) {
-                // For PostgreSQL, compare JSON by casting to text
+                // Compare JSON variant - use driver-specific syntax
                 $variantJson = json_encode($variant, JSON_UNESCAPED_SLASHES);
-                $query->whereRaw('variant::text = ?', [$variantJson]);
+                
+                if ($isPostgreSQL) {
+                    // PostgreSQL: cast JSON to text for comparison
+                    $query->whereRaw('variant::text = ?', [$variantJson]);
+                } elseif ($isMySQL) {
+                    // MySQL/MariaDB: cast JSON to CHAR for comparison
+                    $query->whereRaw('CAST(variant AS CHAR) = ?', [$variantJson]);
+                } else {
+                    // Fallback: compare as JSON string (for SQLite, etc.)
+                    $query->where('variant', $variantJson);
+                }
             } else {
                 // For products without variants, check for null or empty JSON
-                // PostgreSQL: cast JSON to text for comparison
-                $query->where(function ($q) {
-                    $q->whereNull('variant')
-                      ->orWhereRaw('variant::text = ?', ['[]'])
-                      ->orWhereRaw('variant::text = ?', ['null'])
-                      ->orWhereRaw('variant::text = ?', ['""']);
+                $query->where(function ($q) use ($isPostgreSQL, $isMySQL) {
+                    $q->whereNull('variant');
+                    
+                    if ($isPostgreSQL) {
+                        // PostgreSQL: cast JSON to text for comparison
+                        $q->orWhereRaw('variant::text = ?', ['[]'])
+                          ->orWhereRaw('variant::text = ?', ['null'])
+                          ->orWhereRaw('variant::text = ?', ['""']);
+                    } elseif ($isMySQL) {
+                        // MySQL/MariaDB: check for null, empty JSON array, or empty JSON object
+                        $q->orWhereRaw('CAST(variant AS CHAR) = ?', ['[]'])
+                          ->orWhereRaw('CAST(variant AS CHAR) = ?', ['{}'])
+                          ->orWhereRaw('JSON_LENGTH(variant) = 0');
+                    } else {
+                        // Fallback: check for empty array or empty string (for SQLite, etc.)
+                        $q->orWhere('variant', '[]')
+                          ->orWhere('variant', '{}')
+                          ->orWhere('variant', '');
+                    }
                 });
             }
             

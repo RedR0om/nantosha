@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
-import { computed, ref, watch } from 'vue';
+import { computed, ref, watch, onMounted, onUnmounted, nextTick } from 'vue';
 import ProductCard from '@/components/ProductCard.vue';
 import ProductCarousel from '@/components/ProductCarousel.vue';
 import HeroCarousel from '@/components/HeroCarousel.vue';
 import PublicNav from '@/components/PublicNav.vue';
 import CartSidebarWrapper from '@/components/CartSidebarWrapper.vue';
-import { CheckCircle, Shield, Award, Package } from 'lucide-vue-next';
+import * as LucideIcons from 'lucide-vue-next';
 import { useLanguage } from '@/composables/useLanguage';
 import { translateContent, translateText } from '@/composables/useTranslation';
 
@@ -18,6 +18,38 @@ const translatedSectionsData = ref<Map<number, any>>(new Map());
 const translatedCarouselSlides = ref<Map<number, any>>(new Map());
 // Reactive translated products
 const translatedProducts = ref<Map<number, any>>(new Map());
+
+// Custom CSS injection for custom sections
+const injectedStyles = ref<Map<number, HTMLStyleElement>>(new Map());
+
+// Inject custom CSS for a section
+const injectCustomCSS = (sectionId: number, css: string) => {
+    if (!css) return;
+    
+    // Remove existing style if any
+    const existing = injectedStyles.value.get(sectionId);
+    if (existing && existing.parentNode) {
+        existing.parentNode.removeChild(existing);
+    }
+    
+    // Create new style element
+    const style = document.createElement('style');
+    style.type = 'text/css';
+    style.id = `custom-section-${sectionId}`;
+    style.textContent = css;
+    document.head.appendChild(style);
+    injectedStyles.value.set(sectionId, style);
+};
+
+// Cleanup function
+const cleanupCustomCSS = () => {
+    injectedStyles.value.forEach((style) => {
+        if (style && style.parentNode) {
+            style.parentNode.removeChild(style);
+        }
+    });
+    injectedStyles.value.clear();
+};
 
 const formatPrice = (price: number) => {
     return new Intl.NumberFormat('ja-JP', {
@@ -39,13 +71,19 @@ const props = defineProps<{
 
 // Helper to get icon component by name
 const getIcon = (iconName: string) => {
-    const icons: { [key: string]: any } = {
-        CheckCircle,
-        Shield,
-        Award,
-        Package,
-    };
-    return icons[iconName] || CheckCircle;
+    if (!iconName || typeof iconName !== 'string') return null;
+    try {
+        // Try to get the icon from lucide-vue-next
+        const IconComponent = (LucideIcons as any)[iconName];
+        // Return null if component doesn't exist or is not a valid component
+        if (!IconComponent || typeof IconComponent !== 'function') {
+            return null;
+        }
+        return IconComponent;
+    } catch (error) {
+        console.warn(`Icon "${iconName}" not found in lucide-vue-next`);
+        return null;
+    }
 };
 
 // Translate all sections, carousel slides, and products when language changes (bidirectional)
@@ -108,16 +146,6 @@ watch(language, async () => {
                 category: product.category ? { ...product.category, name: await translateText(product.category.name, language.value, 'auto') } : product.category,
             };
             translatedProducts.value.set(product.id, translated);
-        }
-    }
-    
-    // Translate static carousel titles
-    const keys = Object.keys(carouselTitles.value);
-    for (const key of keys) {
-        try {
-            translatedCarouselTitles.value[key] = await translateText(carouselTitles.value[key], language.value, 'auto');
-        } catch (error) {
-            translatedCarouselTitles.value[key] = carouselTitles.value[key];
         }
     }
 }, { immediate: true });
@@ -210,6 +238,23 @@ const translatedFeaturedProduct = computed(() => {
 const getTranslatedSlide = (slide: any) => {
     return translatedCarouselSlides.value.get(slide.id) || slide;
 };
+
+// Transform carousel slides from database to component format (must be before staticSections)
+const heroSlides = computed(() => {
+    return props.carouselSlides.map(slide => {
+        const translated = getTranslatedSlide(slide);
+        return {
+            id: translated.id,
+            image: translated.image,
+            video: translated.video,
+            media_type: translated.media_type || 'image',
+            title: translated.title,
+            subtitle: translated.subtitle,
+            link: translated.link,
+            buttonText: translated.button_text,
+        };
+    });
+});
 
 // Create virtual static sections for carousel and product sections
 // These will be merged with database sections and sorted by sort_order
@@ -308,22 +353,33 @@ const allSections = computed(() => {
         .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
 });
 
-// Transform carousel slides from database to component format
-const heroSlides = computed(() => {
-    return props.carouselSlides.map(slide => {
-        const translated = getTranslatedSlide(slide);
-        return {
-            id: translated.id,
-            image: translated.image,
-            video: translated.video,
-            media_type: translated.media_type || 'image',
-            title: translated.title,
-            subtitle: translated.subtitle,
-            link: translated.link,
-            buttonText: translated.button_text,
-        };
+// Watch for section changes and inject CSS (must be after allSections is defined)
+watch(() => allSections.value, async () => {
+    await nextTick();
+    cleanupCustomCSS();
+    allSections.value.forEach((section) => {
+        if (section.type === 'custom' && getSectionContent(section)?.custom_css) {
+            injectCustomCSS(section.id || 0, getSectionContent(section).custom_css);
+        }
+    });
+}, { deep: true });
+
+// Cleanup on unmount
+onUnmounted(() => {
+    cleanupCustomCSS();
+});
+
+// Initial CSS injection on mount (must be after allSections is defined)
+onMounted(() => {
+    nextTick(() => {
+        allSections.value.forEach((section) => {
+            if (section.type === 'custom' && getSectionContent(section)?.custom_css) {
+                injectCustomCSS(section.id || 0, getSectionContent(section).custom_css);
+            }
+        });
     });
 });
+
 </script>
 
 <template>
@@ -364,7 +420,9 @@ const heroSlides = computed(() => {
                                 :key="index"
                                 class="flex items-center gap-2 bg-gray-50 px-4 py-2 border border-gray-200"
                             >
-                                <component :is="getIcon(badge.icon)" class="w-4 h-4 text-gray-700" />
+                                <template v-if="getIcon(badge.icon)">
+                                    <component :is="getIcon(badge.icon)" class="w-4 h-4 text-gray-700" />
+                                </template>
                                 <span class="text-sm font-medium text-gray-900">{{ badge.text }}</span>
                             </div>
                         </div>
@@ -406,7 +464,9 @@ const heroSlides = computed(() => {
                             class="text-center"
                         >
                             <div class="w-12 h-12 bg-gray-900 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <component :is="getIcon(item.icon)" class="w-6 h-6 text-white" />
+                                <template v-if="getIcon(item.icon)">
+                                    <component :is="getIcon(item.icon)" class="w-6 h-6 text-white" />
+                                </template>
                             </div>
                             <h3 class="text-lg font-semibold text-gray-900 mb-2">{{ item.title }}</h3>
                             <p class="text-sm text-gray-600 leading-relaxed">{{ item.description }}</p>
@@ -536,19 +596,264 @@ const heroSlides = computed(() => {
                 v-else-if="section.type === 'custom'"
                 :class="[
                     'py-12 md:py-16',
-                    section.background_color === 'gray-50' ? 'bg-gray-50' : 'bg-white'
+                    section.background_color === 'gray-50' ? 'bg-gray-50' : 'bg-white',
+                    section.content?.spacing === 'tight' ? 'py-8 md:py-10' : section.content?.spacing === 'loose' ? 'py-16 md:py-20' : ''
                 ]"
             >
-                <div class="container mx-auto px-4">
-                    <h2 v-if="section.title" class="text-2xl md:text-3xl font-semibold text-gray-900 mb-8 text-center tracking-tight">
-                        {{ section.title }}
-                    </h2>
-                    <p v-if="section.subtitle" class="text-base text-gray-600 mb-6 text-center">
-                        {{ section.subtitle }}
-                    </p>
-                    <!-- Custom sections can be extended based on content structure -->
-                    <div v-if="section.content" class="max-w-4xl mx-auto">
-                        <pre class="text-sm text-gray-600">{{ JSON.stringify(section.content, null, 2) }}</pre>
+                <div 
+                    class="container mx-auto px-4"
+                    :class="{
+                        'max-w-7xl': section.content?.max_width === '7xl',
+                        'max-w-6xl': section.content?.max_width === '6xl',
+                        'max-w-5xl': section.content?.max_width === '5xl',
+                        'max-w-4xl': section.content?.max_width === '4xl',
+                        'max-w-3xl': section.content?.max_width === '3xl',
+                    }"
+                >
+                    <div 
+                        :class="{
+                            'text-left': section.content?.text_alignment === 'left',
+                            'text-center': section.content?.text_alignment === 'center',
+                            'text-right': section.content?.text_alignment === 'right',
+                        }"
+                    >
+                        <h2 v-if="getSectionTitle(section)" class="text-2xl md:text-3xl font-semibold text-gray-900 mb-4 tracking-tight">
+                            {{ getSectionTitle(section) }}
+                        </h2>
+                        <p v-if="getSectionSubtitle(section)" class="text-base text-gray-600 mb-8">
+                            {{ getSectionSubtitle(section) }}
+                        </p>
+                    </div>
+
+                    <div v-if="section.content" class="space-y-8">
+                        <!-- Main Image -->
+                        <div v-if="section.content.image_url" class="w-full">
+                            <img 
+                                :src="section.content.image_url" 
+                                :alt="section.content.image_alt || ''"
+                                class="w-full h-auto rounded-lg"
+                            />
+                        </div>
+
+                        <!-- HTML Content -->
+                        <div v-if="section.content.html_content" v-html="section.content.html_content" class="prose max-w-none"></div>
+
+                        <!-- Text Blocks -->
+                        <div v-if="section.content.text_blocks && section.content.text_blocks.length > 0" class="space-y-6">
+                            <div 
+                                v-for="(block, index) in section.content.text_blocks" 
+                                :key="index"
+                                :class="{
+                                    'text-left': block.alignment === 'left',
+                                    'text-center': block.alignment === 'center',
+                                    'text-right': block.alignment === 'right',
+                                }"
+                            >
+                                <h3 v-if="block.title" class="text-xl font-semibold text-gray-900 mb-3">
+                                    {{ block.title }}
+                                </h3>
+                                <p v-if="block.content" class="text-gray-700 leading-relaxed whitespace-pre-line">
+                                    {{ block.content }}
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Buttons/CTAs -->
+                        <div 
+                            v-if="section.content.buttons && section.content.buttons.length > 0" 
+                            class="flex flex-wrap gap-4"
+                            :class="{
+                                'justify-start': section.content.text_alignment === 'left',
+                                'justify-center': section.content.text_alignment === 'center',
+                                'justify-end': section.content.text_alignment === 'right',
+                            }"
+                        >
+                            <Link
+                                v-for="(button, index) in section.content.buttons"
+                                :key="index"
+                                :href="button.href"
+                                :class="[
+                                    'px-6 py-3 rounded-lg font-medium transition-colors flex items-center gap-2',
+                                    button.style === 'primary' ? 'bg-gray-900 text-white hover:bg-gray-800' :
+                                    button.style === 'secondary' ? 'bg-white text-gray-900 border-2 border-gray-900 hover:bg-gray-50' :
+                                    button.style === 'outline' ? 'bg-transparent text-gray-900 border-2 border-gray-300 hover:border-gray-900' :
+                                    'bg-transparent text-gray-900 hover:bg-gray-100'
+                                ]"
+                            >
+                                <component v-if="getIcon(button.icon)" :is="getIcon(button.icon)" class="w-4 h-4" />
+                                {{ button.text }}
+                            </Link>
+                        </div>
+
+                        <!-- Lists -->
+                        <div v-if="section.content.lists && section.content.lists.length > 0" class="space-y-8">
+                            <div v-for="(list, listIndex) in section.content.lists" :key="listIndex" class="space-y-3">
+                                <h4 v-if="list.title" class="text-lg font-semibold text-gray-900 mb-3">
+                                    {{ list.title }}
+                                </h4>
+                                <ul 
+                                    v-if="list.style === 'bullet' || list.style === 'check'"
+                                    class="space-y-2"
+                                    :class="list.style === 'check' ? 'list-none' : 'list-disc list-inside'"
+                                >
+                                    <li 
+                                        v-for="(item, itemIndex) in list.items" 
+                                        :key="itemIndex"
+                                        class="text-gray-700 flex items-start gap-2"
+                                    >
+                                        <component 
+                                            v-if="list.style === 'check' && getIcon('CheckCircle')" 
+                                            :is="getIcon('CheckCircle')" 
+                                            class="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" 
+                                        />
+                                        <span>{{ item }}</span>
+                                    </li>
+                                </ul>
+                                <ol v-else-if="list.style === 'numbered'" class="list-decimal list-inside space-y-2">
+                                    <li v-for="(item, itemIndex) in list.items" :key="itemIndex" class="text-gray-700">
+                                        {{ item }}
+                                    </li>
+                                </ol>
+                            </div>
+                        </div>
+
+                        <!-- Grid Items -->
+                        <div v-if="section.content.grid_items && section.content.grid_items.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            <div 
+                                v-for="(item, index) in section.content.grid_items" 
+                                :key="index"
+                                class="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-lg transition-shadow"
+                            >
+                                <div v-if="item.image_url" class="mb-4">
+                                    <img 
+                                        :src="item.image_url" 
+                                        :alt="item.title"
+                                        class="w-full h-48 object-cover rounded-lg"
+                                    />
+                                </div>
+                                <div v-if="item.icon && getIcon(item.icon)" class="mb-4">
+                                    <component :is="getIcon(item.icon)" class="w-8 h-8 text-gray-900" />
+                                </div>
+                                <h5 v-if="item.title" class="text-lg font-semibold text-gray-900 mb-2">
+                                    {{ item.title }}
+                                </h5>
+                                <p v-if="item.description" class="text-gray-600 mb-4">
+                                    {{ item.description }}
+                                </p>
+                                <Link 
+                                    v-if="item.link"
+                                    :href="item.link"
+                                    class="text-gray-900 font-medium hover:underline inline-flex items-center gap-1"
+                                >
+                                    Learn More
+                                    <component v-if="getIcon('ArrowRight')" :is="getIcon('ArrowRight')" class="w-4 h-4" />
+                                </Link>
+                            </div>
+                        </div>
+
+                        <!-- Badges -->
+                        <div v-if="section.content.badges && section.content.badges.length > 0" class="flex flex-wrap gap-3">
+                            <div
+                                v-for="(badge, index) in section.content.badges"
+                                :key="index"
+                                class="flex items-center gap-2 bg-gray-50 px-4 py-2 border border-gray-200 rounded"
+                            >
+                                <component v-if="getIcon(badge.icon)" :is="getIcon(badge.icon)" class="w-4 h-4 text-gray-700" />
+                                <span class="text-sm font-medium text-gray-900">{{ badge.text }}</span>
+                            </div>
+                        </div>
+
+                        <!-- Features -->
+                        <div v-if="section.content.features && section.content.features.length > 0" class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                            <div
+                                v-for="(feature, index) in section.content.features"
+                                :key="index"
+                                class="text-center"
+                            >
+                                <div class="w-12 h-12 bg-gray-900 rounded-full flex items-center justify-center mx-auto mb-4">
+                                    <component v-if="getIcon(feature.icon)" :is="getIcon(feature.icon)" class="w-6 h-6 text-white" />
+                                </div>
+                                <h3 v-if="feature.title" class="text-lg font-semibold text-gray-900 mb-2">{{ feature.title }}</h3>
+                                <p v-if="feature.description" class="text-sm text-gray-600 leading-relaxed">{{ feature.description }}</p>
+                            </div>
+                        </div>
+
+                        <!-- Ingredients -->
+                        <div v-if="section.content.ingredients && section.content.ingredients.length > 0" class="space-y-2">
+                            <h4 class="text-lg font-semibold text-gray-900 mb-4">Ingredients</h4>
+                            <div class="space-y-1">
+                                <div 
+                                    v-for="(ingredient, index) in section.content.ingredients" 
+                                    :key="index"
+                                    class="flex justify-between items-center py-2 border-b border-gray-200"
+                                >
+                                    <span class="text-gray-700">{{ ingredient.name }}</span>
+                                    <span class="text-gray-900 font-medium">{{ ingredient.amount }}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Details -->
+                        <div v-if="section.content.details && section.content.details.length > 0" class="space-y-3">
+                            <h4 class="text-lg font-semibold text-gray-900 mb-4">Details</h4>
+                            <div class="space-y-2">
+                                <div 
+                                    v-for="(detail, index) in section.content.details" 
+                                    :key="index"
+                                    class="flex justify-between items-start py-2 border-b border-gray-200"
+                                >
+                                    <span class="text-gray-600 font-medium">{{ detail.label }}</span>
+                                    <span class="text-gray-900 text-right">{{ detail.value }}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Pricing Tiers -->
+                        <div v-if="section.content.pricing_tiers && section.content.pricing_tiers.length > 0" class="space-y-4">
+                            <h4 class="text-lg font-semibold text-gray-900 mb-4">Pricing</h4>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div
+                                    v-for="(tier, index) in section.content.pricing_tiers"
+                                    :key="index"
+                                    class="bg-white border border-gray-200 rounded-lg p-6 text-center"
+                                >
+                                    <div class="text-2xl font-bold text-gray-900 mb-2">{{ tier.qty }} Capsules</div>
+                                    <div class="text-lg text-gray-600 mb-1">Total: ¥{{ tier.price.toLocaleString() }}</div>
+                                    <div class="text-sm text-gray-500">Per Cap: ¥{{ tier.perCap.toLocaleString() }}</div>
+                                </div>
+                            </div>
+                            <p v-if="section.content.pricing_note" class="text-sm text-gray-600 mt-4">
+                                {{ section.content.pricing_note }}
+                            </p>
+                        </div>
+
+                        <!-- Steps (How It Works) -->
+                        <div v-if="section.content.steps && section.content.steps.length > 0" class="space-y-8">
+                            <h4 class="text-lg font-semibold text-gray-900 mb-6">How It Works</h4>
+                            <div class="space-y-6">
+                                <div
+                                    v-for="(step, index) in section.content.steps"
+                                    :key="index"
+                                    class="flex gap-4"
+                                >
+                                    <div class="flex-shrink-0 w-10 h-10 bg-gray-900 text-white rounded-full flex items-center justify-center font-semibold">
+                                        {{ step.number }}
+                                    </div>
+                                    <div class="flex-1">
+                                        <h5 v-if="step.title" class="text-lg font-semibold text-gray-900 mb-2">{{ step.title }}</h5>
+                                        <p v-if="step.description" class="text-gray-600 leading-relaxed">{{ step.description }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div v-if="section.content.step_link_href" class="mt-8 text-center">
+                                <Link
+                                    :href="section.content.step_link_href"
+                                    class="inline-block text-sm text-gray-900 font-medium hover:text-gray-700 transition-colors"
+                                >
+                                    {{ section.content.step_link_text || 'Learn more' }} →
+                                </Link>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -718,15 +1023,21 @@ const heroSlides = computed(() => {
                     </p>
                     <div class="flex flex-wrap justify-center gap-3 mb-8">
                         <div class="flex items-center gap-2 bg-gray-50 px-4 py-2 border border-gray-200">
-                            <CheckCircle class="w-4 h-4 text-gray-700" />
+                            <template v-if="getIcon('CheckCircle')">
+                                <component :is="getIcon('CheckCircle')" class="w-4 h-4 text-gray-700" />
+                            </template>
                             <span class="text-sm font-medium text-gray-900">99%+ Purity</span>
                         </div>
                         <div class="flex items-center gap-2 bg-gray-50 px-4 py-2 border border-gray-200">
-                            <Shield class="w-4 h-4 text-gray-700" />
+                            <template v-if="getIcon('Shield')">
+                                <component :is="getIcon('Shield')" class="w-4 h-4 text-gray-700" />
+                            </template>
                             <span class="text-sm font-medium text-gray-900">Japanese Lab Verified</span>
                         </div>
                         <div class="flex items-center gap-2 bg-gray-50 px-4 py-2 border border-gray-200">
-                            <Award class="w-4 h-4 text-gray-700" />
+                            <template v-if="getIcon('Award')">
+                                <component :is="getIcon('Award')" class="w-4 h-4 text-gray-700" />
+                            </template>
                             <span class="text-sm font-medium text-gray-900">From Dr. Allan Landrito</span>
                         </div>
                     </div>

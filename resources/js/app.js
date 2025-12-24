@@ -60,6 +60,12 @@ const pages = {
     'Admin/HomePageSections/Create': () => import('./pages/Admin/HomePageSections/Create.vue'),
     'Admin/HomePageSections/Edit': () => import('./pages/Admin/HomePageSections/Edit.vue'),
     
+    // Information pages
+    'HowToOrder': () => import('./pages/HowToOrder.vue'),
+    'FAQ': () => import('./pages/Faq.vue'),
+    'Contact': () => import('./pages/Contact.vue'),
+    'CorporateProfile': () => import('./pages/CorporateProfile.vue'),
+    
     // Settings pages
     'settings/Profile': () => import('./pages/settings/Profile.vue'),
     'settings/Password': () => import('./pages/settings/Password.vue'),

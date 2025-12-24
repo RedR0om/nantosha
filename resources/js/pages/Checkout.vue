@@ -881,6 +881,30 @@ const submit = () => {
                         </div>
                     </div>
 
+                    <!-- Shipping & Customs Information -->
+                    <div class="bg-blue-50 border-l-4 border-blue-500 rounded-lg p-6">
+                        <h2 class="text-xl font-bold text-gray-900 mb-4">
+                            Shipping & Customs Information
+                        </h2>
+                        <div class="space-y-4 text-gray-700">
+                            <div>
+                                <p class="mb-2">
+                                    Upon confirmation of your bank transfer, we will immediately translate your Health Check Sheet into English and submit it to Dr. Landrito in the Philippines to begin the shipping process. Please allow 8 to 16 days for arrival.
+                                </p>
+                            </div>
+                            <div>
+                                <p class="mb-2">
+                                    After shipping from the Philippines, the package will typically be delivered directly to your home. In rare cases, customs may contact you. Please state that it is for "personal use". Personal import of medicine is legal under Article 12 of the PMDA Act. If customs requests any documentation, please contact us. We will prepare the necessary documents at our expense.
+                                </p>
+                            </div>
+                            <div>
+                                <p>
+                                    Please note that you may be required by Japanese customs to pay an additional import tax (approx. 5% of the total amount paid). This tax is the responsibility of the recipient.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Payment Method -->
                     <div class="bg-white rounded-lg shadow-md p-6">
                         <h2 class="text-xl font-bold text-gray-900 mb-4">

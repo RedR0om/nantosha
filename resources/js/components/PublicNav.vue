@@ -49,12 +49,29 @@ const navItems = [
         titleJa: 'よくある質問',
         href: '/faq',
     },
-    {
-        title: 'Contact Us',
-        titleJa: 'お問い合わせ',
-        href: '/contact',
-    },
 ];
+
+const contactDropdownOpen = ref(false);
+const contactDropdownTimeout = ref<NodeJS.Timeout | null>(null);
+
+const openContactDropdown = () => {
+    if (contactDropdownTimeout.value) {
+        clearTimeout(contactDropdownTimeout.value);
+    }
+    contactDropdownOpen.value = true;
+};
+
+const closeContactDropdown = () => {
+    contactDropdownTimeout.value = setTimeout(() => {
+        contactDropdownOpen.value = false;
+    }, 200);
+};
+
+const keepContactDropdownOpen = () => {
+    if (contactDropdownTimeout.value) {
+        clearTimeout(contactDropdownTimeout.value);
+    }
+};
 
 const toggleMobileMenu = () => {
     mobileMenuOpen.value = !mobileMenuOpen.value;
@@ -93,6 +110,58 @@ const handleLogout = () => {
                             <span class="text-xs text-gray-400 mt-0.5">{{ item.titleJa }}</span>
                         </div>
                     </Link>
+                    
+                    <!-- Contact Us Dropdown -->
+                    <div 
+                        class="relative"
+                        @mouseenter="openContactDropdown"
+                        @mouseleave="closeContactDropdown"
+                    >
+                        <div
+                            :class="[
+                                'text-sm font-medium transition-colors py-2 cursor-pointer',
+                                (isActive('/contact') || isActive('/corporate-profile'))
+                                    ? 'text-gray-900 border-b-2 border-gray-900'
+                                    : 'text-gray-600 hover:text-gray-900'
+                            ]"
+                        >
+                            <div class="flex flex-col items-start">
+                                <span>Contact Us</span>
+                                <span class="text-xs text-gray-400 mt-0.5">お問い合わせ</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Dropdown Menu -->
+                        <div
+                            v-if="contactDropdownOpen"
+                            @mouseenter="keepContactDropdownOpen"
+                            @mouseleave="closeContactDropdown"
+                            class="absolute top-full left-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50"
+                        >
+                            <Link
+                                href="/contact"
+                                :class="[
+                                    'block px-4 py-3 text-sm font-medium transition-colors',
+                                    isActive('/contact')
+                                        ? 'text-gray-900 bg-gray-50'
+                                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                                ]"
+                            >
+                                Profile
+                            </Link>
+                            <Link
+                                href="/corporate-profile"
+                                :class="[
+                                    'block px-4 py-3 text-sm font-medium transition-colors border-t border-gray-200',
+                                    isActive('/corporate-profile')
+                                        ? 'text-gray-900 bg-gray-50'
+                                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                                ]"
+                            >
+                                Corporate Profile
+                            </Link>
+                        </div>
+                    </div>
                     
                     <!-- Language Switcher -->
                     <div class="flex items-center gap-1 border border-gray-300 rounded-lg overflow-hidden">
@@ -199,6 +268,37 @@ const handleLogout = () => {
                             <span class="text-xs text-gray-400 mt-0.5">{{ item.titleJa }}</span>
                         </div>
                     </Link>
+                    
+                    <!-- Mobile Contact Us -->
+                    <div class="px-3 py-2">
+                        <div class="text-sm font-medium text-gray-700 mb-2">Contact Us / お問い合わせ</div>
+                        <div class="flex flex-col space-y-1 ml-4">
+                            <Link
+                                href="/contact"
+                                @click="mobileMenuOpen = false"
+                                :class="[
+                                    'px-3 py-2 text-sm transition-colors rounded',
+                                    isActive('/contact')
+                                        ? 'text-gray-900 bg-gray-50'
+                                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                                ]"
+                            >
+                                Profile
+                            </Link>
+                            <Link
+                                href="/corporate-profile"
+                                @click="mobileMenuOpen = false"
+                                :class="[
+                                    'px-3 py-2 text-sm transition-colors rounded',
+                                    isActive('/corporate-profile')
+                                        ? 'text-gray-900 bg-gray-50'
+                                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                                ]"
+                            >
+                                Corporate Profile
+                            </Link>
+                        </div>
+                    </div>
                     
                     <!-- Mobile Language Switcher -->
                     <div class="border-t border-gray-200 mt-2 pt-2 px-3 py-2">

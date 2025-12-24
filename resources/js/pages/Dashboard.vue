@@ -4,7 +4,7 @@ import { dashboard } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link } from '@inertiajs/vue3';
 import { ref, watch, onMounted } from 'vue';
-import { Package, Plus, ShoppingBag, TrendingUp, Users, DollarSign, Image, Settings, ShoppingCart, HelpCircle, Tag, Folder, Layout } from 'lucide-vue-next';
+import { Package, ShoppingBag, TrendingUp, Users, DollarSign, Image, Settings, ShoppingCart, HelpCircle, Tag, Folder, Layout } from 'lucide-vue-next';
 import { useLanguage } from '@/composables/useLanguage';
 import { translateText } from '@/composables/useTranslation';
 
@@ -39,8 +39,6 @@ const formatCurrency = (amount: number) => {
 const texts = ref({
     manageProducts: 'Manage Products',
     manageProductsDesc: 'View, edit, and manage your product catalog',
-    createProduct: 'Create Product',
-    createProductDesc: 'Add a new product to your store',
     inventory: 'Inventory',
     inventoryDesc: 'Track stock levels and availability',
     manageCarousel: 'Manage Carousel',
@@ -100,19 +98,6 @@ onMounted(translateAll);
                     </div>
                     <h3 class="text-lg font-semibold text-gray-900 mb-1">{{ translated.manageProducts || texts.manageProducts }}</h3>
                     <p class="text-sm text-gray-600">{{ translated.manageProductsDesc || texts.manageProductsDesc }}</p>
-                </Link>
-
-                <Link
-                    href="/admin/products/create"
-                    class="group bg-white border border-gray-200 rounded-lg p-6 hover:border-gray-900 hover:shadow-lg transition-all"
-                >
-                    <div class="flex items-center justify-between mb-4">
-                        <div class="w-12 h-12 bg-gray-900 rounded-lg flex items-center justify-center group-hover:bg-gray-800 transition-colors">
-                            <Plus class="w-6 h-6 text-white" />
-                        </div>
-                    </div>
-                    <h3 class="text-lg font-semibold text-gray-900 mb-1">{{ translated.createProduct || texts.createProduct }}</h3>
-                    <p class="text-sm text-gray-600">{{ translated.createProductDesc || texts.createProductDesc }}</p>
                 </Link>
 
                 <Link
