@@ -51,25 +51,25 @@ const navItems = [
     },
 ];
 
-const contactDropdownOpen = ref(false);
-const contactDropdownTimeout = ref<NodeJS.Timeout | null>(null);
+const aboutUsDropdownOpen = ref(false);
+const aboutUsDropdownTimeout = ref<NodeJS.Timeout | null>(null);
 
-const openContactDropdown = () => {
-    if (contactDropdownTimeout.value) {
-        clearTimeout(contactDropdownTimeout.value);
+const openAboutUsDropdown = () => {
+    if (aboutUsDropdownTimeout.value) {
+        clearTimeout(aboutUsDropdownTimeout.value);
     }
-    contactDropdownOpen.value = true;
+    aboutUsDropdownOpen.value = true;
 };
 
-const closeContactDropdown = () => {
-    contactDropdownTimeout.value = setTimeout(() => {
-        contactDropdownOpen.value = false;
+const closeAboutUsDropdown = () => {
+    aboutUsDropdownTimeout.value = setTimeout(() => {
+        aboutUsDropdownOpen.value = false;
     }, 200);
 };
 
-const keepContactDropdownOpen = () => {
-    if (contactDropdownTimeout.value) {
-        clearTimeout(contactDropdownTimeout.value);
+const keepAboutUsDropdownOpen = () => {
+    if (aboutUsDropdownTimeout.value) {
+        clearTimeout(aboutUsDropdownTimeout.value);
     }
 };
 
@@ -111,43 +111,43 @@ const handleLogout = () => {
                         </div>
                     </Link>
                     
-                    <!-- Contact Us Dropdown -->
+                    <!-- About Us Dropdown -->
                     <div 
                         class="relative"
-                        @mouseenter="openContactDropdown"
-                        @mouseleave="closeContactDropdown"
+                        @mouseenter="openAboutUsDropdown"
+                        @mouseleave="closeAboutUsDropdown"
                     >
                         <div
                             :class="[
                                 'text-sm font-medium transition-colors py-2 cursor-pointer',
-                                (isActive('/contact') || isActive('/corporate-profile'))
+                                (isActive('/dr-landrito-profile') || isActive('/corporate-profile'))
                                     ? 'text-gray-900 border-b-2 border-gray-900'
                                     : 'text-gray-600 hover:text-gray-900'
                             ]"
                         >
                             <div class="flex flex-col items-start">
-                                <span>Contact Us</span>
-                                <span class="text-xs text-gray-400 mt-0.5">お問い合わせ</span>
+                                <span>About Us</span>
+                                <span class="text-xs text-gray-400 mt-0.5">会社について</span>
                             </div>
                         </div>
                         
                         <!-- Dropdown Menu -->
                         <div
-                            v-if="contactDropdownOpen"
-                            @mouseenter="keepContactDropdownOpen"
-                            @mouseleave="closeContactDropdown"
-                            class="absolute top-full left-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50"
+                            v-if="aboutUsDropdownOpen"
+                            @mouseenter="keepAboutUsDropdownOpen"
+                            @mouseleave="closeAboutUsDropdown"
+                            class="absolute top-full left-0 mt-2 w-56 bg-white border border-gray-200 rounded-lg shadow-lg z-50"
                         >
                             <Link
-                                href="/contact"
+                                href="/dr-landrito-profile"
                                 :class="[
                                     'block px-4 py-3 text-sm font-medium transition-colors',
-                                    isActive('/contact')
+                                    isActive('/dr-landrito-profile')
                                         ? 'text-gray-900 bg-gray-50'
                                         : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
                                 ]"
                             >
-                                Profile
+                                Dr. Allan Landrito
                             </Link>
                             <Link
                                 href="/corporate-profile"
@@ -162,6 +162,22 @@ const handleLogout = () => {
                             </Link>
                         </div>
                     </div>
+                    
+                    <!-- Contact Us Link -->
+                    <Link
+                        href="/contact"
+                        :class="[
+                            'text-sm font-medium transition-colors py-2',
+                            isActive('/contact')
+                                ? 'text-gray-900 border-b-2 border-gray-900'
+                                : 'text-gray-600 hover:text-gray-900'
+                        ]"
+                    >
+                        <div class="flex flex-col items-start">
+                            <span>Contact Us</span>
+                            <span class="text-xs text-gray-400 mt-0.5">お問い合わせ</span>
+                        </div>
+                    </Link>
                     
                     <!-- Language Switcher -->
                     <div class="flex items-center gap-1 border border-gray-300 rounded-lg overflow-hidden">
@@ -269,21 +285,21 @@ const handleLogout = () => {
                         </div>
                     </Link>
                     
-                    <!-- Mobile Contact Us -->
+                    <!-- Mobile About Us -->
                     <div class="px-3 py-2">
-                        <div class="text-sm font-medium text-gray-700 mb-2">Contact Us / お問い合わせ</div>
+                        <div class="text-sm font-medium text-gray-700 mb-2">About Us / 会社について</div>
                         <div class="flex flex-col space-y-1 ml-4">
                             <Link
-                                href="/contact"
+                                href="/dr-landrito-profile"
                                 @click="mobileMenuOpen = false"
                                 :class="[
                                     'px-3 py-2 text-sm transition-colors rounded',
-                                    isActive('/contact')
+                                    isActive('/dr-landrito-profile')
                                         ? 'text-gray-900 bg-gray-50'
                                         : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
                                 ]"
                             >
-                                Profile
+                                Dr. Allan Landrito
                             </Link>
                             <Link
                                 href="/corporate-profile"
@@ -299,6 +315,23 @@ const handleLogout = () => {
                             </Link>
                         </div>
                     </div>
+                    
+                    <!-- Mobile Contact Us -->
+                    <Link
+                        href="/contact"
+                        @click="mobileMenuOpen = false"
+                        :class="[
+                            'px-3 py-2 text-sm font-medium transition-colors',
+                            isActive('/contact')
+                                ? 'text-gray-900 bg-gray-50'
+                                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                        ]"
+                    >
+                        <div class="flex flex-col">
+                            <span>Contact Us</span>
+                            <span class="text-xs text-gray-400 mt-0.5">お問い合わせ</span>
+                        </div>
+                    </Link>
                     
                     <!-- Mobile Language Switcher -->
                     <div class="border-t border-gray-200 mt-2 pt-2 px-3 py-2">

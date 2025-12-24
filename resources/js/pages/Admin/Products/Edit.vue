@@ -20,6 +20,10 @@ const form = useForm({
     sale_price: props.product.sale_price || '',
     price_per_capsule: props.product.price_per_capsule || '',
     price_per_mg: props.product.price_per_mg || '',
+    is_bottle_based: props.product.is_bottle_based || false,
+    capsules_per_bottle: props.product.capsules_per_bottle || 50,
+    bottle_pricing_tiers: (props.product.bottle_pricing_tiers || []) as Array<{capsules: number, price: number, price_per_capsule: number}>,
+    bottles_only: props.product.bottles_only || false,
     sku: props.product.sku || '',
     stock_quantity: props.product.stock_quantity || 0,
     in_stock: props.product.in_stock,
@@ -84,6 +88,25 @@ const removeImageFromArray = (index: number) => {
         // This is a new upload
         form.images.splice(index, 1);
         imagesPreview.value.splice(index, 1);
+    }
+};
+
+const addPricingTier = () => {
+    form.bottle_pricing_tiers.push({
+        capsules: 0,
+        price: 0,
+        price_per_capsule: 0,
+    });
+};
+
+const removePricingTier = (index: number) => {
+    form.bottle_pricing_tiers.splice(index, 1);
+};
+
+const calculatePricePerCapsule = (tierIndex: number) => {
+    const tier = form.bottle_pricing_tiers[tierIndex];
+    if (tier.capsules > 0 && tier.price > 0) {
+        tier.price_per_capsule = Math.round((tier.price / tier.capsules) * 100) / 100;
     }
 };
 
@@ -378,6 +401,125 @@ const submit = () => {
                                                 class="w-full border border-gray-300 px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:border-gray-900"
                                                 placeholder="e.g., 9.333"
                                             />
+                                        </div>
+                                    </div>
+
+                                    <!-- Bottle-Based Pricing -->
+                                    <div class="border-t border-gray-200 pt-4 mt-4">
+                                        <div class="flex items-center gap-3 mb-4">
+                                            <input
+                                                type="checkbox"
+                                                id="is_bottle_based"
+                                                v-model="form.is_bottle_based"
+                                                class="w-4 h-4 text-gray-900 border-gray-300 rounded focus:ring-gray-900"
+                                            />
+                                            <label for="is_bottle_based" class="text-sm font-medium text-gray-700 dark:text-gray-700">
+                                                Enable Bottle-Based Pricing
+                                            </label>
+                                        </div>
+
+                                        <div v-if="form.is_bottle_based" class="space-y-4">
+                                            <div class="flex items-center gap-3 mb-2">
+                                                <input
+                                                    type="checkbox"
+                                                    id="bottles_only"
+                                                    v-model="form.bottles_only"
+                                                    class="w-4 h-4 text-gray-900 border-gray-300 rounded focus:ring-gray-900"
+                                                />
+                                                <label for="bottles_only" class="text-sm font-medium text-gray-700 dark:text-gray-700">
+                                                    Only Allow Bottle Purchases (Disable Per-Capsule Buying)
+                                                </label>
+                                            </div>
+                                            <p class="text-xs text-gray-500 mb-4">
+                                                When enabled, customers can only purchase bottles through pricing tiers, not individual capsules.
+                                            </p>
+                                            <div>
+                                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-700 mb-2">
+                                                    Capsules per Bottle
+                                                </label>
+                                                <input
+                                                    v-model="form.capsules_per_bottle"
+                                                    type="number"
+                                                    min="1"
+                                                    class="w-full border border-gray-300 px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:border-gray-900"
+                                                    placeholder="e.g., 50"
+                                                />
+                                            </div>
+
+                                            <div>
+                                                <div class="flex items-center justify-between mb-3">
+                                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-700">
+                                                        Pricing Tiers
+                                                    </label>
+                                                    <button
+                                                        type="button"
+                                                        @click="addPricingTier"
+                                                        class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-white bg-gray-900 hover:bg-gray-800 rounded"
+                                                    >
+                                                        <Plus class="w-3 h-3" />
+                                                        Add Tier
+                                                    </button>
+                                                </div>
+
+                                                <div v-if="form.bottle_pricing_tiers.length === 0" class="text-sm text-gray-500 mb-2">
+                                                    No pricing tiers added. Click "Add Tier" to create pricing tiers.
+                                                </div>
+
+                                                <div v-for="(tier, index) in form.bottle_pricing_tiers" :key="index" class="border border-gray-200 rounded-lg p-4 mb-3 bg-white">
+                                                    <div class="flex items-start justify-between mb-3">
+                                                        <h4 class="text-sm font-medium text-gray-900">Tier {{ index + 1 }}</h4>
+                                                        <button
+                                                            type="button"
+                                                            @click="removePricingTier(index)"
+                                                            class="text-red-600 hover:text-red-800"
+                                                        >
+                                                            <X class="w-4 h-4" />
+                                                        </button>
+                                                    </div>
+                                                    <div class="grid grid-cols-3 gap-3">
+                                                        <div>
+                                                            <label class="block text-xs font-medium text-gray-600 mb-1">
+                                                                Total Capsules
+                                                            </label>
+                                                            <input
+                                                                v-model.number="tier.capsules"
+                                                                type="number"
+                                                                min="1"
+                                                                @input="calculatePricePerCapsule(index)"
+                                                                class="w-full border border-gray-300 px-2 py-1.5 text-sm text-gray-900 bg-white focus:outline-none focus:border-gray-900"
+                                                                placeholder="e.g., 50"
+                                                            />
+                                                        </div>
+                                                        <div>
+                                                            <label class="block text-xs font-medium text-gray-600 mb-1">
+                                                                Total Price (JPY)
+                                                            </label>
+                                                            <input
+                                                                v-model.number="tier.price"
+                                                                type="number"
+                                                                min="0"
+                                                                step="0.01"
+                                                                @input="calculatePricePerCapsule(index)"
+                                                                class="w-full border border-gray-300 px-2 py-1.5 text-sm text-gray-900 bg-white focus:outline-none focus:border-gray-900"
+                                                                placeholder="e.g., 12800"
+                                                            />
+                                                        </div>
+                                                        <div>
+                                                            <label class="block text-xs font-medium text-gray-600 mb-1">
+                                                                Price per Capsule (JPY)
+                                                            </label>
+                                                            <input
+                                                                v-model.number="tier.price_per_capsule"
+                                                                type="number"
+                                                                step="0.01"
+                                                                readonly
+                                                                class="w-full border border-gray-300 px-2 py-1.5 text-sm text-gray-600 bg-gray-50"
+                                                                placeholder="Auto-calculated"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
 

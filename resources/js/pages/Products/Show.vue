@@ -17,6 +17,7 @@ const props = defineProps<{
 
 const page = usePage();
 const quantity = ref(1);
+const selectedPricingTier = ref<any>(null);
 const isAdding = ref(false);
 const selectedImageIndex = ref(0);
 const activeTab = ref('overview');
@@ -131,9 +132,15 @@ const translateProductData = async () => {
 };
 
 watch(language, translateProductData, { immediate: true });
-watch(() => props.product, translateProductData, { deep: true });
+watch(() => props.product, () => {
+    translateProductData();
+    initializePricingTier();
+}, { deep: true });
 watch(() => props.relatedProducts, translateProductData, { deep: true });
-onMounted(translateProductData);
+onMounted(() => {
+    translateProductData();
+    initializePricingTier();
+});
 
 const formatPrice = (price: number) => {
     return new Intl.NumberFormat('ja-JP', {
@@ -143,6 +150,45 @@ const formatPrice = (price: number) => {
     }).format(price);
 };
 
+// Computed property for bottle-based products
+const isBottleBased = computed(() => {
+    const product = translatedProduct.value || props.product;
+    return product.is_bottle_based && product.bottle_pricing_tiers && product.bottle_pricing_tiers.length > 0;
+});
+
+// Computed property to check if only bottles are allowed
+const isBottlesOnly = computed(() => {
+    const product = translatedProduct.value || props.product;
+    return product.bottles_only && isBottleBased.value;
+});
+
+// Initialize selected pricing tier
+const initializePricingTier = () => {
+    const product = translatedProduct.value || props.product;
+    if (isBottleBased.value && product.bottle_pricing_tiers && product.bottle_pricing_tiers.length > 0) {
+        selectedPricingTier.value = product.bottle_pricing_tiers[0];
+        quantity.value = 1; // Start with 1 bottle
+    }
+};
+
+// Calculate total price for bottle-based products
+const totalPrice = computed(() => {
+    const product = translatedProduct.value || props.product;
+    if (isBottleBased.value && selectedPricingTier.value) {
+        return selectedPricingTier.value.price * quantity.value;
+    }
+    return (product.sale_price || product.price) * quantity.value;
+});
+
+// Calculate total capsules for bottle-based products
+const totalCapsules = computed(() => {
+    const product = translatedProduct.value || props.product;
+    if (isBottleBased.value && selectedPricingTier.value) {
+        return selectedPricingTier.value.capsules * quantity.value;
+    }
+    return quantity.value;
+});
+
 const addToCart = () => {
     const product = translatedProduct.value || props.product;
     if (!product.in_stock || quantity.value <= 0) {
@@ -151,10 +197,24 @@ const addToCart = () => {
 
     isAdding.value = true;
 
-    router.post('/cart', {
+    const cartData: any = {
         product_id: product.id,
         quantity: quantity.value,
-    }, {
+    };
+
+    // For bottle-based products, include tier information in variant
+    if (isBottleBased.value && selectedPricingTier.value) {
+        cartData.variant = {
+            type: 'bottle',
+            tier: selectedPricingTier.value,
+            total_capsules: totalCapsules.value,
+            bottles: quantity.value,
+        };
+        // Send total capsules as quantity for cart tracking
+        cartData.quantity = totalCapsules.value;
+    }
+
+    router.post('/cart', cartData, {
         preserveScroll: true,
         onSuccess: () => {
             isAdding.value = false;
@@ -430,8 +490,50 @@ const errorMessage = computed(() => {
                             </p>
                         </div>
 
-                        <!-- Quantity Selector -->
-                        <div class="mb-6">
+                        <!-- Bottle-Based Pricing Selection -->
+                        <div v-if="isBottleBased" class="mb-6 space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-3">Select Quantity</label>
+                                <div class="space-y-2">
+                                    <button
+                                        v-for="(tier, index) in (translatedProduct || product).bottle_pricing_tiers"
+                                        :key="index"
+                                        @click="selectedPricingTier = tier; quantity = 1"
+                                        :class="[
+                                            'w-full text-left p-4 border-2 rounded-lg transition-all',
+                                            selectedPricingTier && selectedPricingTier.capsules === tier.capsules
+                                                ? 'border-gray-900 bg-gray-50'
+                                                : 'border-gray-200 hover:border-gray-400'
+                                        ]"
+                                    >
+                                        <div class="flex justify-between items-center">
+                                            <div>
+                                                <div class="font-semibold text-gray-900">{{ tier.capsules }} caps</div>
+                                                <div class="text-xs text-gray-500">¥{{ tier.price_per_capsule?.toLocaleString() }}/cap</div>
+                                            </div>
+                                            <div class="text-lg font-bold text-gray-900">¥{{ tier.price.toLocaleString() }}</div>
+                                        </div>
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div v-if="selectedPricingTier">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Number of Bottles</label>
+                                <input
+                                    v-model.number="quantity"
+                                    type="number"
+                                    min="1"
+                                    :max="product.stock_quantity ? Math.floor(product.stock_quantity / selectedPricingTier.capsules) : 999"
+                                    class="w-full border border-gray-300 px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:border-gray-900"
+                                />
+                                <p class="text-xs text-gray-500 mt-1">
+                                    {{ product.capsules_per_bottle || 50 }} capsules per bottle
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Regular Quantity Selector (only shown if bottles_only is false) -->
+                        <div v-else-if="!isBottlesOnly" class="mb-6">
                             <label class="block text-sm font-medium text-gray-700 mb-2">{{ translated.quantity || texts.quantity }}</label>
                             <input
                                 v-model.number="quantity"
@@ -441,14 +543,24 @@ const errorMessage = computed(() => {
                                 class="w-full border border-gray-300 px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:border-gray-900"
                             />
                         </div>
+                        
+                        <!-- Message when bottles_only is enabled but bottle-based pricing is not set up -->
+                        <div v-else-if="isBottlesOnly && !isBottleBased" class="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                            <p class="text-sm text-yellow-800">
+                                This product is only available for purchase in bottle quantities. Please contact us for more information.
+                            </p>
+                        </div>
 
                         <div class="bg-gray-50 border border-gray-200 p-4 mb-6">
                             <div class="text-sm text-gray-600 space-y-1">
                                 <div class="flex justify-between">
                                     <span>{{ translated.subtotal || texts.subtotal }}</span>
-                                    <span class="font-semibold">{{ formatPrice((product.sale_price || product.price) * quantity) }}</span>
+                                    <span class="font-semibold">{{ formatPrice(totalPrice) }}</span>
                                 </div>
-                                <div v-if="product.stock_quantity" class="text-xs text-gray-500">
+                                <div v-if="isBottleBased && selectedPricingTier" class="text-xs text-gray-500">
+                                    {{ totalCapsules }} capsules total ({{ quantity }} {{ quantity === 1 ? 'bottle' : 'bottles' }})
+                                </div>
+                                <div v-else-if="product.stock_quantity" class="text-xs text-gray-500">
                                     {{ product.stock_quantity }} {{ translated.inStock || texts.inStock }}
                                 </div>
                             </div>
@@ -465,7 +577,7 @@ const errorMessage = computed(() => {
                         <!-- Add to Cart -->
                         <button
                             @click="addToCart"
-                            :disabled="!product.in_stock || quantity <= 0 || isAdding"
+                            :disabled="!product.in_stock || quantity <= 0 || isAdding || (isBottleBased && !selectedPricingTier) || (isBottlesOnly && !isBottleBased)"
                             class="w-full bg-black text-white py-3 text-sm font-medium hover:bg-gray-800 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed disabled:hover:bg-gray-300 mb-4 uppercase tracking-wide"
                         >
                             {{ isAdding ? (translated.adding || texts.adding) : (product.in_stock ? (translated.addToCart || texts.addToCart) : (translated.soldOut || texts.soldOut)) }}

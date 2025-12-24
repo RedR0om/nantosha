@@ -51,6 +51,7 @@ Route::get('/how-to-order', [HowToOrderController::class, 'index'])->name('how-t
 Route::get('/faq', [FAQController::class, 'index'])->name('faq');
 Route::get('/contact', [ContactController::class, 'index'])->name('contact');
 Route::post('/contact', [ContactController::class, 'store'])->name('contact.store');
+Route::get('/dr-landrito-profile', [ContactController::class, 'drLandritoProfile'])->name('dr-landrito-profile');
 Route::get('/corporate-profile', [ContactController::class, 'corporateProfile'])->name('corporate-profile');
 
 // Dashboard
@@ -72,6 +73,7 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
     Route::get('orders', [\App\Http\Controllers\Admin\AdminOrderController::class, 'index'])->name('orders.index');
     Route::get('orders/{order}', [\App\Http\Controllers\Admin\AdminOrderController::class, 'show'])->name('orders.show');
     Route::put('orders/{order}', [\App\Http\Controllers\Admin\AdminOrderController::class, 'update'])->name('orders.update');
+    Route::resource('inquiries', \App\Http\Controllers\Admin\InquiryController::class);
 });
 
 require __DIR__.'/settings.php';

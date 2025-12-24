@@ -4,7 +4,7 @@ import { dashboard } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link } from '@inertiajs/vue3';
 import { ref, watch, onMounted } from 'vue';
-import { Package, ShoppingBag, TrendingUp, Users, DollarSign, Image, Settings, ShoppingCart, HelpCircle, Tag, Folder, Layout } from 'lucide-vue-next';
+import { Package, ShoppingBag, TrendingUp, Users, DollarSign, Image, Settings, ShoppingCart, HelpCircle, Tag, Folder, Layout, Mail } from 'lucide-vue-next';
 import { useLanguage } from '@/composables/useLanguage';
 import { translateText } from '@/composables/useTranslation';
 
@@ -55,6 +55,8 @@ const texts = ref({
     manageBrandsDesc: 'Add and manage product brands',
     manageCategories: 'Manage Categories',
     manageCategoriesDesc: 'Add and manage product categories',
+    manageInquiries: 'Manage Inquiries',
+    manageInquiriesDesc: 'View and respond to customer inquiries',
     totalProducts: 'Total Products',
     activeProducts: 'Active Products',
     totalSales: 'Total Sales',
@@ -202,6 +204,19 @@ onMounted(translateAll);
                     </div>
                     <h3 class="text-lg font-semibold text-gray-900 mb-1">{{ translated.manageCategories || texts.manageCategories }}</h3>
                     <p class="text-sm text-gray-600">{{ translated.manageCategoriesDesc || texts.manageCategoriesDesc }}</p>
+                </Link>
+
+                <Link
+                    href="/admin/inquiries"
+                    class="group bg-white border border-gray-200 rounded-lg p-6 hover:border-gray-900 hover:shadow-lg transition-all"
+                >
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-12 h-12 bg-gray-900 rounded-lg flex items-center justify-center group-hover:bg-gray-800 transition-colors">
+                            <Mail class="w-6 h-6 text-white" />
+                        </div>
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-1">{{ translated.manageInquiries || texts.manageInquiries }}</h3>
+                    <p class="text-sm text-gray-600">{{ translated.manageInquiriesDesc || texts.manageInquiriesDesc }}</p>
                 </Link>
             </div>
 

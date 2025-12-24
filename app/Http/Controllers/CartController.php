@@ -48,6 +48,14 @@ class CartController extends Controller
                 return back()->withErrors(['product' => 'This product is out of stock.']);
             }
 
+            // Check if product requires bottle-only purchases
+            if ($product->bottles_only && $product->is_bottle_based) {
+                // Verify that the request includes bottle tier information
+                if (!isset($request->variant['type']) || $request->variant['type'] !== 'bottle') {
+                    return back()->withErrors(['product' => 'This product can only be purchased in bottle quantities. Please select a bottle option.']);
+                }
+            }
+
             // Check stock quantity (allow null stock_quantity for unlimited stock)
             if ($product->stock_quantity !== null && $product->stock_quantity <= 0) {
                 return back()->withErrors(['product' => 'This product is out of stock.']);
@@ -120,7 +128,14 @@ class CartController extends Controller
             
             $cartItem = $query->first();
 
+            // Determine price based on product type
             $price = $product->sale_price ?? $product->price;
+            
+            // For bottle-based products, use the tier price
+            if ($product->is_bottle_based && isset($variant['tier']) && isset($variant['tier']['price'])) {
+                $price = $variant['tier']['price'];
+                // Quantity is already set to total capsules in the request
+            }
 
             if ($cartItem) {
                 // Calculate new total quantity

@@ -241,7 +241,13 @@ onMounted(() => {
                                 {{ item.product?.name }}
                             </h3>
                             <p class="text-xs text-gray-600 mb-3">
-                                {{ formatPrice(item.price) }} each
+                                <span v-if="item.variant && item.variant.type === 'bottle'">
+                                    {{ item.variant.bottles }} {{ item.variant.bottles === 1 ? 'bottle' : 'bottles' }} 
+                                    ({{ item.variant.total_capsules }} capsules)
+                                </span>
+                                <span v-else>
+                                    {{ formatPrice(item.price) }} each
+                                </span>
                             </p>
                             
                             <div class="flex items-center justify-between">
@@ -271,7 +277,12 @@ onMounted(() => {
                                         class="w-12 h-7 flex items-center justify-center text-center text-sm font-medium text-gray-900 cursor-pointer border border-transparent hover:border-gray-300 rounded"
                                         title="Click to edit quantity"
                                     >
-                                        {{ item.quantity }}
+                                        <span v-if="item.variant && item.variant.type === 'bottle'">
+                                            {{ item.variant.bottles }}
+                                        </span>
+                                        <span v-else>
+                                            {{ item.quantity }}
+                                        </span>
                                     </span>
                                     <button
                                         @click="updateQuantity(item, item.quantity + 1)"

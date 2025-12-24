@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Inquiry;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -23,13 +24,15 @@ class ContactController extends Controller
             'message' => 'required|string',
         ]);
 
-        // In a real application, you would:
-        // 1. Send an email notification
-        // 2. Store the message in the database
-        // 3. Send a confirmation email to the user
+        // Store the inquiry in the database
+        Inquiry::create($validated);
 
-        // For now, we'll just return a success response
         return back()->with('success', 'Thank you for your message. We will get back to you soon.');
+    }
+
+    public function drLandritoProfile()
+    {
+        return Inertia::render('DrLandritoProfile');
     }
 
     public function corporateProfile()

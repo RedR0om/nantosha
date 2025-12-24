@@ -59,11 +59,14 @@ const pages = {
     'Admin/HomePageSections/Index': () => import('./pages/Admin/HomePageSections/Index.vue'),
     'Admin/HomePageSections/Create': () => import('./pages/Admin/HomePageSections/Create.vue'),
     'Admin/HomePageSections/Edit': () => import('./pages/Admin/HomePageSections/Edit.vue'),
+    'Admin/Inquiries/Index': () => import('./pages/Admin/Inquiries/Index.vue'),
+    'Admin/Inquiries/Show': () => import('./pages/Admin/Inquiries/Show.vue'),
     
     // Information pages
     'HowToOrder': () => import('./pages/HowToOrder.vue'),
     'FAQ': () => import('./pages/Faq.vue'),
     'Contact': () => import('./pages/Contact.vue'),
+    'DrLandritoProfile': () => import('./pages/DrLandritoProfile.vue'),
     'CorporateProfile': () => import('./pages/CorporateProfile.vue'),
     
     // Settings pages
