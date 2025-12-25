@@ -128,7 +128,7 @@ onMounted(translateAll);
                     <span
                         :class="product.sale_price ? 'text-sm text-gray-500 line-through' : 'text-base font-semibold text-gray-900'"
                     >
-                        {{ product.sale_price ? formatPrice(product.price) : formatPrice(product.price) }}
+                        {{ formatPrice(product.price) }}
                     </span>
                 </div>
                 <p class="text-xs text-gray-500 mt-1">

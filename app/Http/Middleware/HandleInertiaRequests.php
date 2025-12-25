@@ -44,11 +44,25 @@ class HandleInertiaRequests extends Middleware
         $cartItems = $this->getCartItems($request);
         $cartItems->load('product.brand', 'product.category');
         
-        $cartSubtotal = $cartItems->sum(function ($item) {
+        // Calculate base subtotal (cart stores base prices)
+        $cartBaseSubtotal = $cartItems->sum(function ($item) {
+            // For bottle-based products, calculate using variant data
+            if ($item->variant && isset($item->variant['type']) && $item->variant['type'] === 'bottle' 
+                && isset($item->variant['tier']['price']) && isset($item->variant['bottles'])) {
+                return $item->variant['tier']['price'] * $item->variant['bottles'];
+            }
+            // For regular products, use base price * quantity
             return $item->price * $item->quantity;
         });
-        $cartTax = $cartSubtotal * 0.08;
-        $cartShipping = $cartSubtotal >= 10000 ? 0 : 500; // Free shipping over ¥10,000
+        
+        // For cart display, show base prices with tax breakdown
+        $cartSubtotal = $cartBaseSubtotal;
+        // Calculate tax amount from base subtotal (for display)
+        // First calculate tax-inclusive price, then extract tax amount
+        $cartTaxInclusiveSubtotal = \App\Services\PriceCalculationService::calculateTaxInclusivePrice($cartBaseSubtotal);
+        $cartTax = \App\Services\PriceCalculationService::calculateTaxAmount($cartTaxInclusiveSubtotal);
+        // Calculate shipping based on base subtotal using settings
+        $cartShipping = \App\Services\PriceCalculationService::calculateShipping($cartBaseSubtotal);
         $cartTotal = $cartSubtotal + $cartTax + $cartShipping;
         $cartCount = $cartItems->sum('quantity');
 

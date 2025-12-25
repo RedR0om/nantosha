@@ -42,11 +42,6 @@ const texts = ref({
     publication2Role: 'Co-author',
     forMedicalProfessionals: 'For Medical Professionals',
     forMedicalProfessionalsText: 'Doctors requiring "Yakkan Shoumei" (Medicine Import Confirmation) for patient prescriptions should contact us directly for special arrangements.',
-    bankAccountInfo: 'Bank Account Information',
-    bankAccount1: 'GMO Aozora Net Bank',
-    bankAccount1Details: 'Corporate Sales Dept. II | Ordinary (普) 1715362 | Name: カブシキガイシャナントウシャ (Nantosha Co., Ltd.)',
-    bankAccount2: 'MUFG Bank',
-    bankAccount2Details: 'Toranomon Branch | Ordinary (普) 1749447 | Name: イシヤマエイイチロウ (Eiichiro Ishiyama)',
     photos: 'Photos',
     achievements: 'Achievements & Recognition',
     clinicalPractice: 'Clinical Practice',
@@ -64,9 +59,6 @@ const texts = ref({
     photo3Description: 'Patients visiting Dr. Landrito\'s clinic for cancer treatments combining Ivermectin and Vitamin C.',
     photo4Caption: 'Dr. Landrito meets Dr. Satoshi Omura',
     photo4Description: 'In September 2025, during his visit to Japan, Dr. Landrito met with Dr. Satoshi Omura (2015 Nobel Laureate) at Kitasato University. Dr. Omura acknowledged Dr. Landrito\'s Ivermectin as being over 99% pure.',
-    aboutCustoms: 'About Customs',
-    aboutCustomsText: 'After shipping from the Philippines, the package will typically be delivered directly to your home. In rare cases, customs may contact you. Please state that it is for "personal use". Personal import of medicine is legal under Article 12 of the PMDA Act. If customs requests any documentation, please contact us. We will prepare the necessary documents at our expense.',
-    aboutCustomsNote: 'Please note that you may be required by Japanese customs to pay an additional import tax (approx. 5% of the total amount paid). This tax is the responsibility of the recipient.',
 });
 
 const translated = ref<Record<string, string>>({});
@@ -168,21 +160,6 @@ onMounted(translateAll);
                     </div>
                 </div>
 
-                <!-- About Customs -->
-                <div class="bg-blue-50 border-l-4 border-blue-500 rounded-lg p-8 mb-8">
-                    <h2 class="text-2xl font-bold text-gray-900 mb-4">
-                        {{ translated.aboutCustoms || texts.aboutCustoms }}
-                    </h2>
-                    <div class="space-y-4 text-gray-700">
-                        <p>
-                            {{ translated.aboutCustomsText || texts.aboutCustomsText }}
-                        </p>
-                        <p>
-                            {{ translated.aboutCustomsNote || texts.aboutCustomsNote }}
-                        </p>
-                    </div>
-                </div>
-
                 <!-- Clinical Practice -->
                 <div class="bg-white border border-gray-200 rounded-lg p-8 mb-8">
                     <div class="flex items-center gap-4 mb-4">
@@ -259,36 +236,6 @@ onMounted(translateAll);
                         <p class="text-gray-600">
                             {{ translated.publication2 || texts.publication2 }} - {{ translated.publication2Role || texts.publication2Role }}
                         </p>
-                    </div>
-                </div>
-
-                <!-- Bank Account Information -->
-                <div class="bg-white border border-gray-200 rounded-lg p-8 mb-8">
-                    <div class="flex items-center gap-4 mb-6">
-                        <div class="flex-shrink-0 w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
-                            <CreditCard class="w-6 h-6 text-gray-600" />
-                        </div>
-                        <h3 class="text-2xl font-bold text-gray-900">
-                            {{ translated.bankAccountInfo || texts.bankAccountInfo }}
-                        </h3>
-                    </div>
-                    <div class="space-y-4">
-                        <div class="bg-gray-50 rounded-lg p-4">
-                            <h4 class="font-semibold text-gray-900 mb-2">
-                                {{ translated.bankAccount1 || texts.bankAccount1 }}
-                            </h4>
-                            <p class="text-sm text-gray-600">
-                                {{ translated.bankAccount1Details || texts.bankAccount1Details }}
-                            </p>
-                        </div>
-                        <div class="bg-gray-50 rounded-lg p-4">
-                            <h4 class="font-semibold text-gray-900 mb-2">
-                                {{ translated.bankAccount2 || texts.bankAccount2 }}
-                            </h4>
-                            <p class="text-sm text-gray-600">
-                                {{ translated.bankAccount2Details || texts.bankAccount2Details }}
-                            </p>
-                        </div>
                     </div>
                 </div>
 

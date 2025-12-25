@@ -10,6 +10,11 @@ const props = defineProps<{
     tax: number;
     shipping: number;
     total: number;
+    taxSettings?: {
+        tax_enabled: boolean;
+        tax_rate: number;
+        price_increase_percentage: number;
+    };
 }>();
 
 const form = ref({
@@ -45,6 +50,7 @@ const form = ref({
 
 const currentStep = ref(1);
 const totalSteps = 5;
+const errors = ref<Record<string, string>>({});
 
 const countries = [
     { code: 'AF', name: 'Afghanistan' },
@@ -306,7 +312,262 @@ const formatPrice = (price: number) => {
     }).format(price);
 };
 
+// Parse variant if it's a string
+const parseVariant = (item: any) => {
+    if (!item.variant) return null;
+    return typeof item.variant === 'string' ? JSON.parse(item.variant) : item.variant;
+};
+
+// Get display quantity for an item (bottles for bottle-based, quantity for regular)
+const getDisplayQuantity = (item: any) => {
+    const variant = parseVariant(item);
+    if (variant && variant.type === 'bottle' && variant.bottles) {
+        return variant.bottles;
+    }
+    return item.quantity || 1;
+};
+
+// Get quantity label for display
+const getQuantityLabel = (item: any) => {
+    const variant = parseVariant(item);
+    if (variant && variant.type === 'bottle' && variant.bottles) {
+        const bottles = variant.bottles;
+        return `Quantity: ${bottles} ${bottles === 1 ? 'bottle' : 'bottles'}`;
+    }
+    return `Quantity: ${item.quantity || 1}`;
+};
+
+// Get tier information for display (if applicable)
+const getTierInfo = (item: any): string | null => {
+    const variant = parseVariant(item);
+    if (variant && variant.type === 'bottle' && variant.tier) {
+        const tier = variant.tier;
+        if (tier.capsules) {
+            return `${tier.capsules} capsules per bottle`;
+        }
+    }
+    return null;
+};
+
+// Calculate tax-inclusive price for a base price
+const calculateTaxInclusivePrice = (basePrice: number): number => {
+    if (!props.taxSettings) {
+        // Fallback if settings not available
+        return basePrice;
+    }
+    
+    const { tax_enabled, tax_rate, price_increase_percentage } = props.taxSettings;
+    
+    if (!tax_enabled) {
+        // If tax is disabled, only apply price increase
+        return Math.round(basePrice * (1 + price_increase_percentage / 100) * 100) / 100;
+    }
+    
+    // Apply price increase first, then tax
+    const priceAfterIncrease = basePrice * (1 + price_increase_percentage / 100);
+    const finalPrice = priceAfterIncrease * (1 + tax_rate / 100);
+    
+    return Math.round(finalPrice * 100) / 100;
+};
+
+// Get tax-inclusive price for an item (per unit)
+const getItemPrice = (item: any): number => {
+    return calculateTaxInclusivePrice(item.price);
+};
+
+// Calculate tax-inclusive item total (price × bottles for bottle-based, price × quantity for regular)
+const getItemTotal = (item: any): number => {
+    const variant = parseVariant(item);
+    const baseTotal = variant && variant.type === 'bottle' && variant.bottles
+        ? item.price * variant.bottles
+        : item.price * (item.quantity || 1);
+    
+    // Calculate tax-inclusive total
+    return calculateTaxInclusivePrice(baseTotal);
+};
+
+const validateForm = (): boolean => {
+    errors.value = {};
+    let isValid = true;
+
+    // Validate email
+    if (!form.value.email || !form.value.email.trim()) {
+        errors.value.email = 'Email is required.';
+        isValid = false;
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.value.email)) {
+        errors.value.email = 'Please enter a valid email address.';
+        isValid = false;
+    }
+
+    // Validate first name
+    if (!form.value.first_name || !form.value.first_name.trim()) {
+        errors.value.first_name = 'First name is required.';
+        isValid = false;
+    }
+
+    // Validate last name
+    if (!form.value.last_name || !form.value.last_name.trim()) {
+        errors.value.last_name = 'Last name is required.';
+        isValid = false;
+    }
+
+    // Validate phone
+    if (!form.value.phone || !form.value.phone.trim()) {
+        errors.value.phone = 'Phone number is required.';
+        isValid = false;
+    }
+
+    // Validate address
+    if (!form.value.address_line_1 || !form.value.address_line_1.trim()) {
+        errors.value.address_line_1 = 'Address line 1 is required.';
+        isValid = false;
+    }
+
+    // Validate city
+    if (!form.value.city || !form.value.city.trim()) {
+        errors.value.city = 'City is required.';
+        isValid = false;
+    }
+
+    // Validate state
+    if (!form.value.state || !form.value.state.trim()) {
+        errors.value.state = 'State/Prefecture is required.';
+        isValid = false;
+    }
+
+    // Validate postal code
+    if (!form.value.postal_code || !form.value.postal_code.trim()) {
+        errors.value.postal_code = 'Postal code is required.';
+        isValid = false;
+    }
+
+    // Validate country
+    if (!form.value.country || !form.value.country.trim()) {
+        errors.value.country = 'Country is required.';
+        isValid = false;
+    }
+
+    // Validate payment method
+    if (!form.value.payment_method) {
+        errors.value.payment_method = 'Please select a payment method.';
+        isValid = false;
+    }
+
+    // Validate risk acknowledgment
+    if (!form.value.risk_acknowledged) {
+        errors.value.risk_acknowledged = 'You must acknowledge the risks before proceeding.';
+        isValid = false;
+    }
+
+    // Validate resale prohibition
+    if (!form.value.resale_prohibited) {
+        errors.value.resale_prohibited = 'You must agree to the resale prohibition before proceeding.';
+        isValid = false;
+    }
+
+    return isValid;
+};
+
+const scrollToFirstError = () => {
+    // Find the first field with an error
+    const firstErrorField = Object.keys(errors.value)[0];
+    if (firstErrorField) {
+        // Determine which step contains the error field
+        let targetStep = 1;
+        
+        // Customer info fields are in step 2
+        if (['email', 'first_name', 'last_name', 'phone'].includes(firstErrorField)) {
+            targetStep = 2;
+        }
+        // Address fields are in step 3
+        else if (['address_line_1', 'city', 'state', 'postal_code', 'country'].includes(firstErrorField)) {
+            targetStep = 3;
+        }
+        // Payment method is in step 4
+        else if (firstErrorField === 'payment_method') {
+            targetStep = 4;
+        }
+        // Risk acknowledgment is in step 4
+        else if (['risk_acknowledged', 'resale_prohibited'].includes(firstErrorField)) {
+            targetStep = 4;
+        }
+
+        // Navigate to the step with the error
+        if (targetStep !== currentStep.value) {
+            currentStep.value = targetStep;
+            // Wait for DOM update, then scroll to the field
+            setTimeout(() => {
+                const field = document.querySelector(`[name="${firstErrorField}"], input[v-model*="${firstErrorField}"], select[v-model*="${firstErrorField}"]`);
+                if (field) {
+                    field.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    (field as HTMLElement).focus();
+                }
+            }, 100);
+        } else {
+            // Already on the correct step, just scroll to the field
+            setTimeout(() => {
+                const field = document.querySelector(`[name="${firstErrorField}"], input[v-model*="${firstErrorField}"], select[v-model*="${firstErrorField}"]`);
+                if (field) {
+                    field.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    (field as HTMLElement).focus();
+                }
+            }, 100);
+        }
+    }
+};
+
 const nextStep = () => {
+    // Validate current step before proceeding
+    if (currentStep.value === 2) {
+        // Validate customer info fields
+        const step2Errors: Record<string, string> = {};
+        if (!form.value.email || !form.value.email.trim()) {
+            step2Errors.email = 'Email is required.';
+        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.value.email)) {
+            step2Errors.email = 'Please enter a valid email address.';
+        }
+        if (!form.value.first_name || !form.value.first_name.trim()) {
+            step2Errors.first_name = 'First name is required.';
+        }
+        if (!form.value.last_name || !form.value.last_name.trim()) {
+            step2Errors.last_name = 'Last name is required.';
+        }
+        if (!form.value.phone || !form.value.phone.trim()) {
+            step2Errors.phone = 'Phone number is required.';
+        }
+        
+        if (Object.keys(step2Errors).length > 0) {
+            errors.value = { ...errors.value, ...step2Errors };
+            scrollToFirstError();
+            return;
+        }
+    } else if (currentStep.value === 3) {
+        // Validate address fields
+        const step3Errors: Record<string, string> = {};
+        if (!form.value.address_line_1 || !form.value.address_line_1.trim()) {
+            step3Errors.address_line_1 = 'Address line 1 is required.';
+        }
+        if (!form.value.city || !form.value.city.trim()) {
+            step3Errors.city = 'City is required.';
+        }
+        if (!form.value.state || !form.value.state.trim()) {
+            step3Errors.state = 'State/Prefecture is required.';
+        }
+        if (!form.value.postal_code || !form.value.postal_code.trim()) {
+            step3Errors.postal_code = 'Postal code is required.';
+        }
+        if (!form.value.country || !form.value.country.trim()) {
+            step3Errors.country = 'Country is required.';
+        }
+        
+        if (Object.keys(step3Errors).length > 0) {
+            errors.value = { ...errors.value, ...step3Errors };
+            scrollToFirstError();
+            return;
+        }
+    }
+
+    // Clear errors for current step
     if (currentStep.value < totalSteps) {
         currentStep.value++;
     }
@@ -319,13 +580,12 @@ const prevStep = () => {
 };
 
 const submit = () => {
-    if (!form.value.risk_acknowledged || !form.value.resale_prohibited) {
-        alert('Please acknowledge all risks and prohibitions before proceeding.');
-        return;
-    }
-    
-    if (!form.value.payment_method) {
-        alert('Please select a payment method.');
+    // Clear previous errors
+    errors.value = {};
+
+    // Validate all fields
+    if (!validateForm()) {
+        scrollToFirstError();
         return;
     }
     
@@ -340,10 +600,19 @@ const submit = () => {
         onSuccess: () => {
             // Success - will redirect to order page
         },
-        onError: (errors) => {
-            console.error('Order submission errors:', errors);
-            if (errors.risk_acknowledged || errors.resale_prohibited) {
-                alert('Please acknowledge all risks and prohibitions.');
+        onError: (serverErrors) => {
+            console.error('Order submission errors:', serverErrors);
+            
+            // Map server errors to our errors object
+            if (serverErrors) {
+                Object.keys(serverErrors).forEach((key) => {
+                    errors.value[key] = Array.isArray(serverErrors[key]) 
+                        ? serverErrors[key][0] 
+                        : serverErrors[key];
+                });
+                
+                // Scroll to first error
+                scrollToFirstError();
             }
         },
     });
@@ -393,6 +662,26 @@ const submit = () => {
                 </div>
             </div>
 
+            <!-- Error Alert -->
+            <div
+                v-if="Object.keys(errors).length > 0"
+                class="bg-red-50 border-l-4 border-red-500 p-4 mb-6 rounded"
+            >
+                <div class="flex items-start">
+                    <AlertTriangle class="w-5 h-5 text-red-600 mt-0.5 mr-3 flex-shrink-0" />
+                    <div>
+                        <h3 class="text-sm font-semibold text-red-800 mb-1">
+                            Please fix the following errors:
+                        </h3>
+                        <ul class="list-disc list-inside text-sm text-red-700 space-y-1">
+                            <li v-for="(error, field) in errors" :key="field">
+                                {{ error }}
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
             <form @submit.prevent="submit">
                 <!-- Step 1: Confirm Amount -->
                 <div
@@ -427,12 +716,15 @@ const submit = () => {
                                     {{ item.product?.name }}
                                 </h3>
                                 <p class="text-sm text-gray-600">
-                                    Quantity: {{ item.quantity }} × {{ formatPrice(item.price) }}
+                                    {{ getQuantityLabel(item) }} × {{ formatPrice(getItemPrice(item)) }}
+                                </p>
+                                <p v-if="getTierInfo(item)" class="text-xs text-gray-500 mt-1">
+                                    Tier: {{ getTierInfo(item) }}
                                 </p>
                             </div>
                             <div class="text-right">
                                 <p class="font-semibold text-gray-900">
-                                    {{ formatPrice(item.price * item.quantity) }}
+                                    {{ formatPrice(getItemTotal(item)) }}
                                 </p>
                             </div>
                         </div>
@@ -445,6 +737,10 @@ const submit = () => {
                             <div class="flex justify-between text-gray-600">
                                 <span>Subtotal:</span>
                                 <span>{{ formatPrice(subtotal) }}</span>
+                            </div>
+                            <div v-if="tax > 0" class="flex justify-between text-gray-600">
+                                <span>Tax (included):</span>
+                                <span>{{ formatPrice(tax) }}</span>
                             </div>
                             <div class="flex justify-between text-gray-600">
                                 <span>Shipping:</span>
@@ -483,8 +779,15 @@ const submit = () => {
                                 v-model="form.email"
                                 type="email"
                                 required
-                                class="w-full border border-gray-300 rounded-lg px-4 py-2 text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900"
+                                @input="delete errors.email"
+                                :class="[
+                                    'w-full border rounded-lg px-4 py-2 text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900',
+                                    errors.email ? 'border-red-500' : 'border-gray-300'
+                                ]"
                             />
+                            <p v-if="errors.email" class="mt-1 text-sm text-red-600">
+                                {{ errors.email }}
+                            </p>
                         </div>
                         
                         <div>
@@ -495,8 +798,15 @@ const submit = () => {
                                 v-model="form.phone"
                                 type="tel"
                                 required
-                                class="w-full border border-gray-300 rounded-lg px-4 py-2 text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900"
+                                @input="delete errors.phone"
+                                :class="[
+                                    'w-full border rounded-lg px-4 py-2 text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900',
+                                    errors.phone ? 'border-red-500' : 'border-gray-300'
+                                ]"
                             />
+                            <p v-if="errors.phone" class="mt-1 text-sm text-red-600">
+                                {{ errors.phone }}
+                            </p>
                         </div>
                         
                         <div>
@@ -507,8 +817,15 @@ const submit = () => {
                                 v-model="form.first_name"
                                 type="text"
                                 required
-                                class="w-full border border-gray-300 rounded-lg px-4 py-2 text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900"
+                                @input="delete errors.first_name"
+                                :class="[
+                                    'w-full border rounded-lg px-4 py-2 text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900',
+                                    errors.first_name ? 'border-red-500' : 'border-gray-300'
+                                ]"
                             />
+                            <p v-if="errors.first_name" class="mt-1 text-sm text-red-600">
+                                {{ errors.first_name }}
+                            </p>
                         </div>
                         
                         <div>
@@ -519,8 +836,15 @@ const submit = () => {
                                 v-model="form.last_name"
                                 type="text"
                                 required
-                                class="w-full border border-gray-300 rounded-lg px-4 py-2 text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900"
+                                @input="delete errors.last_name"
+                                :class="[
+                                    'w-full border rounded-lg px-4 py-2 text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900',
+                                    errors.last_name ? 'border-red-500' : 'border-gray-300'
+                                ]"
                             />
+                            <p v-if="errors.last_name" class="mt-1 text-sm text-red-600">
+                                {{ errors.last_name }}
+                            </p>
                         </div>
                     </div>
 
@@ -671,8 +995,15 @@ const submit = () => {
                                 v-model="form.address_line_1"
                                 type="text"
                                 required
-                                class="w-full border border-gray-300 rounded-lg px-4 py-2 text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900"
+                                @input="delete errors.address_line_1"
+                                :class="[
+                                    'w-full border rounded-lg px-4 py-2 text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900',
+                                    errors.address_line_1 ? 'border-red-500' : 'border-gray-300'
+                                ]"
                             />
+                            <p v-if="errors.address_line_1" class="mt-1 text-sm text-red-600">
+                                {{ errors.address_line_1 }}
+                            </p>
                         </div>
                         
                         <div class="md:col-span-2">
@@ -694,8 +1025,15 @@ const submit = () => {
                                 v-model="form.city"
                                 type="text"
                                 required
-                                class="w-full border border-gray-300 rounded-lg px-4 py-2 text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900"
+                                @input="delete errors.city"
+                                :class="[
+                                    'w-full border rounded-lg px-4 py-2 text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900',
+                                    errors.city ? 'border-red-500' : 'border-gray-300'
+                                ]"
                             />
+                            <p v-if="errors.city" class="mt-1 text-sm text-red-600">
+                                {{ errors.city }}
+                            </p>
                         </div>
                         
                         <div>
@@ -706,8 +1044,15 @@ const submit = () => {
                                 v-model="form.state"
                                 type="text"
                                 required
-                                class="w-full border border-gray-300 rounded-lg px-4 py-2 text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900"
+                                @input="delete errors.state"
+                                :class="[
+                                    'w-full border rounded-lg px-4 py-2 text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900',
+                                    errors.state ? 'border-red-500' : 'border-gray-300'
+                                ]"
                             />
+                            <p v-if="errors.state" class="mt-1 text-sm text-red-600">
+                                {{ errors.state }}
+                            </p>
                         </div>
                         
                         <div>
@@ -718,8 +1063,15 @@ const submit = () => {
                                 v-model="form.postal_code"
                                 type="text"
                                 required
-                                class="w-full border border-gray-300 rounded-lg px-4 py-2 text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900"
+                                @input="delete errors.postal_code"
+                                :class="[
+                                    'w-full border rounded-lg px-4 py-2 text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900',
+                                    errors.postal_code ? 'border-red-500' : 'border-gray-300'
+                                ]"
                             />
+                            <p v-if="errors.postal_code" class="mt-1 text-sm text-red-600">
+                                {{ errors.postal_code }}
+                            </p>
                         </div>
                         
                         <div>
@@ -729,7 +1081,11 @@ const submit = () => {
                             <select
                                 v-model="form.country"
                                 required
-                                class="w-full border border-gray-300 rounded-lg px-4 py-2 text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900"
+                                @change="delete errors.country"
+                                :class="[
+                                    'w-full border rounded-lg px-4 py-2 text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900',
+                                    errors.country ? 'border-red-500' : 'border-gray-300'
+                                ]"
                             >
                                 <option
                                     v-for="country in countries"
@@ -739,6 +1095,9 @@ const submit = () => {
                                     {{ country.name }}
                                 </option>
                             </select>
+                            <p v-if="errors.country" class="mt-1 text-sm text-red-600">
+                                {{ errors.country }}
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -780,7 +1139,11 @@ const submit = () => {
                                     v-model="form.risk_acknowledged"
                                     type="checkbox"
                                     required
-                                    class="mt-1 rounded"
+                                    @change="delete errors.risk_acknowledged"
+                                    :class="[
+                                        'mt-1 rounded',
+                                        errors.risk_acknowledged ? 'border-red-500' : ''
+                                    ]"
                                     true-value="1"
                                     false-value="0"
                                 />
@@ -788,13 +1151,20 @@ const submit = () => {
                                     I acknowledge the risks of self-medication and understand that I am responsible for my personal import. *
                                 </span>
                             </label>
+                            <p v-if="errors.risk_acknowledged" class="text-sm text-red-600 ml-7">
+                                {{ errors.risk_acknowledged }}
+                            </p>
                             
                             <label class="flex items-start gap-3 cursor-pointer">
                                 <input
                                     v-model="form.resale_prohibited"
                                     type="checkbox"
                                     required
-                                    class="mt-1 rounded"
+                                    @change="delete errors.resale_prohibited"
+                                    :class="[
+                                        'mt-1 rounded',
+                                        errors.resale_prohibited ? 'border-red-500' : ''
+                                    ]"
                                     true-value="1"
                                     false-value="0"
                                 />
@@ -802,6 +1172,9 @@ const submit = () => {
                                     I understand that resale or transfer to third parties is strictly prohibited. *
                                 </span>
                             </label>
+                            <p v-if="errors.resale_prohibited" class="text-sm text-red-600 ml-7">
+                                {{ errors.resale_prohibited }}
+                            </p>
                         </div>
                     </div>
 
@@ -838,12 +1211,15 @@ const submit = () => {
                                         {{ item.product?.name }}
                                     </h3>
                                     <p class="text-sm text-gray-600">
-                                        Quantity: {{ item.quantity }} × {{ formatPrice(item.price) }}
+                                        {{ getQuantityLabel(item) }} × {{ formatPrice(getItemPrice(item)) }}
+                                    </p>
+                                    <p v-if="getTierInfo(item)" class="text-xs text-gray-500 mt-1">
+                                        Tier: {{ getTierInfo(item) }}
                                     </p>
                                 </div>
                                 <div class="text-right">
                                     <p class="font-semibold text-gray-900">
-                                        {{ formatPrice(item.price * item.quantity) }}
+                                        {{ formatPrice(getItemTotal(item)) }}
                                     </p>
                                 </div>
                             </div>
@@ -853,6 +1229,10 @@ const submit = () => {
                             <div class="flex justify-between text-gray-600">
                                 <span>Subtotal:</span>
                                 <span>{{ formatPrice(subtotal) }}</span>
+                            </div>
+                            <div v-if="tax > 0" class="flex justify-between text-gray-600">
+                                <span>Tax (included):</span>
+                                <span>{{ formatPrice(tax) }}</span>
                             </div>
                             <div class="flex justify-between text-gray-600">
                                 <span>Shipping:</span>
@@ -912,11 +1292,12 @@ const submit = () => {
                         </h2>
                         <div class="space-y-3">
                             <label class="flex items-start gap-3 p-4 border-2 rounded-lg cursor-pointer transition-colors"
-                                :class="form.payment_method === 'bank_transfer' ? 'border-gray-900 bg-gray-50' : 'border-gray-200 hover:border-gray-300'">
+                                :class="form.payment_method === 'bank_transfer' ? 'border-gray-900 bg-gray-50' : errors.payment_method ? 'border-red-500' : 'border-gray-200 hover:border-gray-300'">
                                 <input
                                     v-model="form.payment_method"
                                     type="radio"
                                     value="bank_transfer"
+                                    @change="delete errors.payment_method"
                                     class="mt-1"
                                 />
                                 <div class="flex-1">
@@ -928,11 +1309,12 @@ const submit = () => {
                             </label>
                             
                             <label class="flex items-start gap-3 p-4 border-2 rounded-lg cursor-pointer transition-colors"
-                                :class="form.payment_method === 'credit_card' ? 'border-gray-900 bg-gray-50' : 'border-gray-200 hover:border-gray-300'">
+                                :class="form.payment_method === 'credit_card' ? 'border-gray-900 bg-gray-50' : errors.payment_method ? 'border-red-500' : 'border-gray-200 hover:border-gray-300'">
                                 <input
                                     v-model="form.payment_method"
                                     type="radio"
                                     value="credit_card"
+                                    @change="delete errors.payment_method"
                                     class="mt-1"
                                 />
                                 <div class="flex-1">
@@ -943,6 +1325,9 @@ const submit = () => {
                                 </div>
                             </label>
                         </div>
+                        <p v-if="errors.payment_method" class="text-sm text-red-600 mt-2">
+                            {{ errors.payment_method }}
+                        </p>
                         <p class="text-sm text-gray-600 mt-4">
                             Payment instructions will be provided after order confirmation.
                         </p>

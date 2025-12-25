@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Order;
 use App\Models\CartItem;
+use App\Services\PriceCalculationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -44,25 +45,49 @@ class OrderController extends Controller
             }
 
             // Check if product is in stock
-            if (!$product->in_stock || $product->stock_quantity <= 0) {
+            if (!$product->in_stock || ($product->stock_quantity !== null && $product->stock_quantity <= 0)) {
                 return back()->withErrors(['cart' => "{$product->name} is out of stock."]);
             }
 
             // Check if requested quantity exceeds available stock
-            if ($cartItem->quantity > $product->stock_quantity) {
-                return back()->withErrors(['cart' => "Insufficient stock for {$product->name}. Only {$product->stock_quantity} available."]);
+            if ($product->stock_quantity !== null) {
+                // For bottle-based products, quantity is stored as total capsules
+                if ($product->is_bottle_based && $cartItem->variant && isset($cartItem->variant['type']) && $cartItem->variant['type'] === 'bottle') {
+                    if ($cartItem->quantity > $product->stock_quantity) {
+                        $availableBottles = floor($product->stock_quantity / ($cartItem->variant['tier']['capsules'] ?? $product->capsules_per_bottle ?? 50));
+                        return back()->withErrors(['cart' => "Insufficient stock for {$product->name}. Only {$product->stock_quantity} capsules ({$availableBottles} " . ($availableBottles === 1 ? 'bottle' : 'bottles') . ") available."]);
+                    }
+                } else {
+                    // For regular products, check quantity directly
+                    if ($cartItem->quantity > $product->stock_quantity) {
+                        return back()->withErrors(['cart' => "Insufficient stock for {$product->name}. Only {$product->stock_quantity} available."]);
+                    }
+                }
             }
         }
 
         DB::beginTransaction();
         try {
-            $subtotal = $cartItems->sum(function ($item) {
+            // Calculate base subtotal (cart stores base prices)
+            $baseSubtotal = $cartItems->sum(function ($item) {
+                // For bottle-based products, calculate using saved price and bottles from variant
+                // Prices are base prices
+                if ($item->variant && isset($item->variant['type']) && $item->variant['type'] === 'bottle' 
+                    && isset($item->variant['bottles'])) {
+                    return $item->price * $item->variant['bottles'];
+                }
+                // For regular products, use base price
                 return $item->price * $item->quantity;
             });
 
-            $tax = 0; // Tax removed
-            $shipping = $subtotal >= 10000 ? 0 : 500; // Free shipping over ¥10,000
-            $total = $subtotal + $shipping; // Total without tax
+            // Calculate tax-inclusive subtotal for order
+            $subtotal = PriceCalculationService::calculateTaxInclusivePrice($baseSubtotal);
+            // Calculate tax amount from tax-inclusive subtotal (for display)
+            $taxAmount = PriceCalculationService::calculateTaxAmount($subtotal);
+            // Calculate shipping based on tax-inclusive subtotal
+            $shipping = PriceCalculationService::calculateShipping($subtotal);
+            // Total is tax-inclusive subtotal + shipping
+            $total = $subtotal + $shipping;
 
             $order = Order::create([
                 'user_id' => Auth::id(),
@@ -77,7 +102,7 @@ class OrderController extends Controller
                 'postal_code' => $request->postal_code,
                 'country' => $request->country,
                 'subtotal' => $subtotal,
-                'tax' => $tax,
+                'tax' => $taxAmount,
                 'shipping' => $shipping,
                 'total' => $total,
                 'payment_method' => $request->payment_method,
@@ -90,14 +115,27 @@ class OrderController extends Controller
             foreach ($cartItems as $cartItem) {
                 $product = $cartItem->product;
                 
+                // Determine quantity and total for order item
+                // For bottle-based products, use bottles for quantity display and total calculation
+                $orderQuantity = $cartItem->quantity; // Default: use cart quantity
+                $orderTotal = $cartItem->price * $cartItem->quantity; // Default: price * quantity
+                
+                if ($product->is_bottle_based && $cartItem->variant && isset($cartItem->variant['type']) && $cartItem->variant['type'] === 'bottle' 
+                    && isset($cartItem->variant['bottles'])) {
+                    // For bottle-based products, use bottles for quantity and total calculation
+                    $bottles = $cartItem->variant['bottles'];
+                    $orderQuantity = $bottles; // Store bottles as quantity for display
+                    $orderTotal = $cartItem->price * $bottles; // Total = price per bottle * bottles
+                }
+                
                 // Create order item
                 $order->items()->create([
                     'product_id' => $cartItem->product_id,
                     'product_name' => $cartItem->product->name,
                     'product_sku' => $cartItem->product->sku,
-                    'quantity' => $cartItem->quantity,
+                    'quantity' => $orderQuantity,
                     'price' => $cartItem->price,
-                    'total' => $cartItem->price * $cartItem->quantity,
+                    'total' => $orderTotal,
                     'variant' => $cartItem->variant,
                 ]);
 

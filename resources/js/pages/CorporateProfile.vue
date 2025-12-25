@@ -12,21 +12,20 @@ const texts = ref({
     subtitle: '会社概要',
     corporateProfile: 'Corporate Profile (Company Information)',
     companyName: 'Company Name',
-    companyNameValue: 'Nantosha Co., Ltd. (株式会社南東舎)',
+    companyNameValue: 'Nantosha Co., Ltd.',
     ceo: 'CEO / Representative Director',
     ceoValue: 'Eiichiro Ishiyama (石山永一郎)',
     officeLocations: 'Office Locations',
-    headquarters: 'Headquarters (Editorial & Publishing)',
-    headquartersAddress: '1-2-10-102 Hakusan, Bunkyo-ku, Tokyo 113-0001, Japan',
-    phone: 'Phone',
+    headOffice: 'Head Office (Publishing & Editorial Department)',
+    headOfficeAddress: '1-2-10-102 Hakusan, Bunkyo-ku, Tokyo 113-0001, Japan',
+    phone: 'Tel',
     mobile: 'Mobile',
-    fax: 'FAX',
-    saitamaOffice: 'Saitama Office (Shipping, Import & Export)',
-    saitamaAddress: 'Corpo Village Bldg A, 5-47-13 Tsukagoshi, Warabi-shi, Saitama 335-0002, Japan',
-    saitamaPhoneFax: 'Phone & FAX',
-    manilaBureau: 'Manila Bureau (Philippines)',
-    manilaAddress: 'Unit 2409 Royal Plaza, 638 Remedios St, Malate, Manila M.M, Philippines',
-    tel: 'Tel',
+    fax: 'Fax',
+    saitamaHeadOffice: 'Saitama Head Office (Logistics, Distribution & Import/Export Department)',
+    saitamaAddress: '5-47-13 Tsukagoshi, Warabi-shi, Saitama 335-0002, Japan',
+    saitamaPhoneFax: 'Tel & Fax',
+    manilaBranchOffice: 'Manila Branch Office',
+    manilaAddress: 'Unit 2409, Royal Plaza, 638 Remedios St., Malate, Manila, Metro Manila, Philippines',
     contactInformation: 'Contact Information',
     email: 'Email',
     address: 'Address',
@@ -102,15 +101,15 @@ onMounted(translateAll);
                         </h3>
                         
                         <div class="space-y-8">
-                            <!-- Headquarters -->
+                            <!-- Head Office -->
                             <div>
                                 <h4 class="text-lg font-semibold text-gray-900 mb-4">
-                                    {{ translated.headquarters || texts.headquarters }}
+                                    {{ translated.headOffice || texts.headOffice }}
                                 </h4>
                                 <div class="space-y-2 text-gray-600">
                                     <p class="flex items-start gap-2">
                                         <span class="mt-1">•</span>
-                                        <span><span class="font-medium">{{ translated.address || texts.address }}:</span> {{ translated.headquartersAddress || texts.headquartersAddress }}</span>
+                                        <span><span class="font-medium">{{ translated.address || texts.address }}:</span> {{ translated.headOfficeAddress || texts.headOfficeAddress }}</span>
                                     </p>
                                     <p class="flex items-start gap-2">
                                         <span class="mt-1">•</span>
@@ -118,19 +117,23 @@ onMounted(translateAll);
                                     </p>
                                     <p class="flex items-start gap-2">
                                         <span class="mt-1">•</span>
+                                        <span><span class="font-medium">{{ translated.fax || texts.fax }}:</span> +81-48-202-1322 (Nantosha Saitama Head Office)</span>
+                                    </p>
+                                    <p class="flex items-start gap-2">
+                                        <span class="mt-1">•</span>
                                         <span><span class="font-medium">{{ translated.mobile || texts.mobile }}:</span> +81-80-6260-0853 (Ishiyama)</span>
                                     </p>
                                     <p class="flex items-start gap-2">
                                         <span class="mt-1">•</span>
-                                        <span><span class="font-medium">{{ translated.fax || texts.fax }}:</span> +81-48-202-1322</span>
+                                        <span><span class="font-medium">{{ translated.mobile || texts.mobile }}:</span> +81-80-4491-8876 (Tahara)</span>
                                     </p>
                                 </div>
                             </div>
 
-                            <!-- Saitama Office -->
+                            <!-- Saitama Head Office -->
                             <div>
                                 <h4 class="text-lg font-semibold text-gray-900 mb-4">
-                                    {{ translated.saitamaOffice || texts.saitamaOffice }}
+                                    {{ translated.saitamaHeadOffice || texts.saitamaHeadOffice }}
                                 </h4>
                                 <div class="space-y-2 text-gray-600">
                                     <p class="flex items-start gap-2">
@@ -144,10 +147,10 @@ onMounted(translateAll);
                                 </div>
                             </div>
 
-                            <!-- Manila Bureau -->
+                            <!-- Manila Branch Office -->
                             <div>
                                 <h4 class="text-lg font-semibold text-gray-900 mb-4">
-                                    {{ translated.manilaBureau || texts.manilaBureau }}
+                                    {{ translated.manilaBranchOffice || texts.manilaBranchOffice }}
                                 </h4>
                                 <div class="space-y-2 text-gray-600">
                                     <p class="flex items-start gap-2">
@@ -156,7 +159,7 @@ onMounted(translateAll);
                                     </p>
                                     <p class="flex items-start gap-2">
                                         <span class="mt-1">•</span>
-                                        <span><span class="font-medium">{{ translated.tel || texts.tel }}:</span> +63-912-484-1551</span>
+                                        <span><span class="font-medium">{{ translated.phone || texts.phone }}:</span> +63-912-484-1551</span>
                                     </p>
                                 </div>
                             </div>

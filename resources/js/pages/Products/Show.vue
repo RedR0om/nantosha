@@ -13,6 +13,16 @@ const { language } = useLanguage();
 const props = defineProps<{
     product: any;
     relatedProducts: any[];
+    taxSettings?: {
+        tax_enabled: boolean;
+        tax_rate: number;
+        price_increase_percentage: number;
+    };
+    shippingSettings?: {
+        shipping_enabled: boolean;
+        shipping_fee: number;
+        free_shipping_threshold: number;
+    };
 }>();
 
 const page = usePage();
@@ -121,7 +131,7 @@ const translateProductData = async () => {
     );
 
     // Translate static text
-    const keys = Object.keys(texts.value);
+    const keys = Object.keys(texts.value) as Array<keyof typeof texts.value>;
     for (const key of keys) {
         try {
             translated.value[key] = await translateText(texts.value[key], language.value, 'auto');
@@ -171,13 +181,85 @@ const initializePricingTier = () => {
     }
 };
 
-// Calculate total price for bottle-based products
-const totalPrice = computed(() => {
+// Calculate tax-inclusive price for a base price
+const calculateTaxInclusivePrice = (basePrice: number): number => {
+    if (!props.taxSettings) {
+        // Fallback if settings not available
+        return basePrice;
+    }
+    
+    const { tax_enabled, tax_rate, price_increase_percentage } = props.taxSettings;
+    
+    if (!tax_enabled) {
+        // If tax is disabled, only apply price increase
+        return Math.round(basePrice * (1 + price_increase_percentage / 100) * 100) / 100;
+    }
+    
+    // Apply price increase first, then tax
+    const priceAfterIncrease = basePrice * (1 + price_increase_percentage / 100);
+    const finalPrice = priceAfterIncrease * (1 + tax_rate / 100);
+    
+    return Math.round(finalPrice * 100) / 100;
+};
+
+// Calculate base total price (before tax)
+const baseTotalPrice = computed(() => {
     const product = translatedProduct.value || props.product;
     if (isBottleBased.value && selectedPricingTier.value) {
+        // Use base tier price
         return selectedPricingTier.value.price * quantity.value;
     }
+    // Use base price
     return (product.sale_price || product.price) * quantity.value;
+});
+
+// Calculate tax-inclusive total price
+const totalPrice = computed(() => {
+    return calculateTaxInclusivePrice(baseTotalPrice.value);
+});
+
+// Calculate tax amount
+const taxAmount = computed(() => {
+    if (!props.taxSettings || !props.taxSettings.tax_enabled) {
+        return 0;
+    }
+    const baseSubtotal = baseTotalPrice.value;
+    const priceIncrease = props.taxSettings.price_increase_percentage;
+    const taxRate = props.taxSettings.tax_rate;
+    
+    // Calculate the price after increase
+    const priceAfterIncrease = baseSubtotal * (1 + priceIncrease / 100);
+    // Calculate the tax amount from this price
+    const tax = priceAfterIncrease * (taxRate / 100);
+    
+    return Math.round(tax * 100) / 100;
+});
+
+// Calculate shipping (similar to cart sidebar logic)
+// Shipping is calculated based on BASE subtotal, not tax-inclusive total
+const shipping = computed(() => {
+    if (!props.shippingSettings) {
+        // Fallback if settings not available
+        return baseTotalPrice.value >= 10000 ? 0 : 500;
+    }
+    
+    const { shipping_enabled, shipping_fee, free_shipping_threshold } = props.shippingSettings;
+    
+    if (!shipping_enabled) {
+        return 0; // Shipping included in prices
+    }
+    
+    // Use base subtotal for shipping threshold check (not tax-inclusive)
+    if (baseTotalPrice.value >= free_shipping_threshold) {
+        return 0; // Free shipping
+    }
+    
+    return shipping_fee;
+});
+
+// Calculate final total (subtotal + tax + shipping)
+const finalTotal = computed(() => {
+    return totalPrice.value + shipping.value;
 });
 
 // Calculate total capsules for bottle-based products
@@ -195,7 +277,25 @@ const addToCart = () => {
         return;
     }
 
+    // Frontend stock validation
+    if (product.stock_quantity !== null) {
+        if (isBottleBased.value && selectedPricingTier.value) {
+            const requestedCapsules = totalCapsules.value;
+            if (requestedCapsules > product.stock_quantity) {
+                const availableBottles = Math.floor(product.stock_quantity / selectedPricingTier.value.capsules);
+                errorMessage.value = `Only ${product.stock_quantity} capsules (${availableBottles} ${availableBottles === 1 ? 'bottle' : 'bottles'}) available in stock.`;
+                return;
+            }
+        } else {
+            if (quantity.value > product.stock_quantity) {
+                errorMessage.value = `Only ${product.stock_quantity} items available in stock.`;
+                return;
+            }
+        }
+    }
+
     isAdding.value = true;
+    errorMessage.value = null; // Clear previous errors
 
     const cartData: any = {
         product_id: product.id,
@@ -204,29 +304,46 @@ const addToCart = () => {
 
     // For bottle-based products, include tier information in variant
     if (isBottleBased.value && selectedPricingTier.value) {
+        // Ensure price is a number
+        const tierPrice = typeof selectedPricingTier.value.price === 'string' 
+            ? parseFloat(selectedPricingTier.value.price) 
+            : selectedPricingTier.value.price;
+        
         cartData.variant = {
             type: 'bottle',
-            tier: selectedPricingTier.value,
+            tier: {
+                ...selectedPricingTier.value,
+                price: tierPrice,
+            },
             total_capsules: totalCapsules.value,
             bottles: quantity.value,
         };
         // Send total capsules as quantity for cart tracking
         cartData.quantity = totalCapsules.value;
+        // Explicitly send price to ensure it's saved
+        cartData.price = tierPrice;
     }
 
     router.post('/cart', cartData, {
         preserveScroll: true,
         onSuccess: () => {
             isAdding.value = false;
+            errorMessage.value = null;
             // Open cart sidebar
             window.dispatchEvent(new CustomEvent('openCartSidebar'));
         },
         onError: (errors) => {
             isAdding.value = false;
             console.error('Error adding to cart:', errors);
-            // Still open cart sidebar so user can see their current cart
-            // The error message will be displayed on the page
-            window.dispatchEvent(new CustomEvent('openCartSidebar'));
+            // Extract error message from response
+            if (errors && typeof errors === 'object') {
+                const errorKeys = Object.keys(errors);
+                if (errorKeys.length > 0) {
+                    errorMessage.value = errors[errorKeys[0]] || 'Failed to add product to cart.';
+                }
+            } else {
+                errorMessage.value = 'Failed to add product to cart. Please try again.';
+            }
         },
         onFinish: () => {
             isAdding.value = false;
@@ -238,13 +355,14 @@ const successMessage = computed(() => {
     const flash = page.props.flash as any;
     return flash?.success || null;
 });
-const errorMessage = computed(() => {
-    const errors = page.props.errors as any;
-    if (errors && Object.keys(errors).length > 0) {
-        return Object.values(errors)[0] as string;
+const errorMessage = ref<string | null>(null);
+
+// Watch for page errors
+watch(() => page.props.errors, (errors) => {
+    if (errors && typeof errors === 'object' && Object.keys(errors).length > 0) {
+        errorMessage.value = Object.values(errors)[0] as string;
     }
-    return null;
-});
+}, { immediate: true, deep: true });
 </script>
 
 <template>
@@ -472,7 +590,7 @@ const errorMessage = computed(() => {
                     <div class="bg-white border border-gray-200 p-6 sticky top-20">
                         <h2 class="text-lg font-semibold text-gray-900 mb-6 tracking-tight">{{ translated.pricing || texts.pricing }}</h2>
                         
-                        <!-- Price Display -->
+                        <!-- Price Display (Base Prices) -->
                         <div class="mb-6">
                             <div class="flex items-baseline gap-2 mb-2">
                                 <span v-if="product.sale_price" class="text-2xl font-bold text-gray-900">
@@ -509,7 +627,7 @@ const errorMessage = computed(() => {
                                         <div class="flex justify-between items-center">
                                             <div>
                                                 <div class="font-semibold text-gray-900">{{ tier.capsules }} caps</div>
-                                                <div class="text-xs text-gray-500">¥{{ tier.price_per_capsule?.toLocaleString() }}/cap</div>
+                                                <div v-if="tier.price_per_capsule" class="text-xs text-gray-500">¥{{ tier.price_per_capsule?.toLocaleString() }}/cap</div>
                                             </div>
                                             <div class="text-lg font-bold text-gray-900">¥{{ tier.price.toLocaleString() }}</div>
                                         </div>
@@ -551,16 +669,29 @@ const errorMessage = computed(() => {
                             </p>
                         </div>
 
+                        <!-- Order Summary (Tax & Shipping Included) -->
                         <div class="bg-gray-50 border border-gray-200 p-4 mb-6">
-                            <div class="text-sm text-gray-600 space-y-1">
+                            <div class="text-sm text-gray-600 space-y-2">
                                 <div class="flex justify-between">
-                                    <span>{{ translated.subtotal || texts.subtotal }}</span>
-                                    <span class="font-semibold">{{ formatPrice(totalPrice) }}</span>
+                                    <span>Subtotal</span>
+                                    <span>{{ formatPrice(baseTotalPrice) }}</span>
                                 </div>
-                                <div v-if="isBottleBased && selectedPricingTier" class="text-xs text-gray-500">
+                                <div v-if="taxAmount > 0" class="flex justify-between">
+                                    <span>Tax (included)</span>
+                                    <span>{{ formatPrice(taxAmount) }}</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span>Shipping</span>
+                                    <span>{{ shipping === 0 ? 'Free' : formatPrice(shipping) }}</span>
+                                </div>
+                                <div class="border-t border-gray-300 pt-2 mt-2 flex justify-between text-base font-bold text-gray-900">
+                                    <span>Total</span>
+                                    <span>{{ formatPrice(finalTotal) }}</span>
+                                </div>
+                                <div v-if="isBottleBased && selectedPricingTier" class="text-xs text-gray-500 mt-2">
                                     {{ totalCapsules }} capsules total ({{ quantity }} {{ quantity === 1 ? 'bottle' : 'bottles' }})
                                 </div>
-                                <div v-else-if="product.stock_quantity" class="text-xs text-gray-500">
+                                <div v-else-if="product.stock_quantity" class="text-xs text-gray-500 mt-2">
                                     {{ product.stock_quantity }} {{ translated.inStock || texts.inStock }}
                                 </div>
                             </div>

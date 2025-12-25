@@ -25,10 +25,18 @@ const texts = ref({
     step3Title: 'Bank Transfer',
     step3Text: 'Complete payment via bank transfer. You will receive payment instructions after confirming your order.',
     step3Note: 'Payment must be completed before order processing begins.',
+    step3BankAccountInfo: 'Bank Account Information',
+    step3BankAccount1: 'GMO Aozora Net Bank',
+    step3BankAccount1Details: 'Corporate Sales Dept. II | Ordinary (Public) 1715362 | Name: Nantosha Co., Ltd.',
+    step3BankAccount2: 'MUFG Bank',
+    step3BankAccount2Details: 'Toranomon Branch | Ordinary (Prussian) 1749447 | Name: Eiichiro Ishiyama',
     step4Title: 'Order Processing & Shipping',
     step4Text: 'Once payment is confirmed, we process your order and ship it from the Philippines. Delivery typically takes 3–10 days.',
     step4Guarantee: 'Re-delivery Guarantee:',
     step4GuaranteeText: 'Free reshipment if the package is lost during transit.',
+    step4AboutCustoms: 'About Customs',
+    step4AboutCustomsText: 'After shipping from the Philippines, the package will typically be delivered directly to your home. In rare cases, customs may contact you. Please state that it is for "personal use". Personal import of medicine is legal under Article 12 of the PMDA Act. If customs requests any documentation, please contact us. We will prepare the necessary documents at our expense.',
+    step4AboutCustomsNote: 'Please note that you may be required by Japanese customs to pay an additional import tax (approx. 5% of the total amount paid). This tax is the responsibility of the recipient.',
     step5Title: 'Receive Your Order',
     step5Text: 'Your order will be delivered to your specified address. Please ensure someone is available to receive the package.',
     importantNotes: 'Important Notes',
@@ -140,10 +148,33 @@ onMounted(translateAll);
                         <p class="text-gray-600 mb-4">
                             {{ translated.step3Text || texts.step3Text }}
                         </p>
-                        <div class="bg-gray-50 p-4 rounded-lg">
+                        <div class="bg-gray-50 p-4 rounded-lg mb-4">
                             <p class="text-sm text-gray-600">
                                 {{ translated.step3Note || texts.step3Note }}
                             </p>
+                        </div>
+                        <div class="bg-white border border-gray-200 rounded-lg p-6">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-4">
+                                {{ translated.step3BankAccountInfo || texts.step3BankAccountInfo }}
+                            </h3>
+                            <div class="space-y-4">
+                                <div class="bg-gray-50 rounded-lg p-4">
+                                    <h4 class="font-semibold text-gray-900 mb-2">
+                                        {{ translated.step3BankAccount1 || texts.step3BankAccount1 }}
+                                    </h4>
+                                    <p class="text-sm text-gray-600">
+                                        {{ translated.step3BankAccount1Details || texts.step3BankAccount1Details }}
+                                    </p>
+                                </div>
+                                <div class="bg-gray-50 rounded-lg p-4">
+                                    <h4 class="font-semibold text-gray-900 mb-2">
+                                        {{ translated.step3BankAccount2 || texts.step3BankAccount2 }}
+                                    </h4>
+                                    <p class="text-sm text-gray-600">
+                                        {{ translated.step3BankAccount2Details || texts.step3BankAccount2Details }}
+                                    </p>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -163,10 +194,23 @@ onMounted(translateAll);
                         <p class="text-gray-600 mb-4">
                             {{ translated.step4Text || texts.step4Text }}
                         </p>
-                        <div class="bg-green-50 border-l-4 border-green-500 p-4 rounded">
+                        <div class="bg-green-50 border-l-4 border-green-500 p-4 rounded mb-4">
                             <p class="text-sm text-gray-700">
                                 <strong>{{ translated.step4Guarantee || texts.step4Guarantee }}</strong> {{ translated.step4GuaranteeText || texts.step4GuaranteeText }}
                             </p>
+                        </div>
+                        <div class="bg-blue-50 border-l-4 border-blue-500 p-4 rounded">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-3">
+                                {{ translated.step4AboutCustoms || texts.step4AboutCustoms }}
+                            </h3>
+                            <div class="space-y-3 text-sm text-gray-700">
+                                <p>
+                                    {{ translated.step4AboutCustomsText || texts.step4AboutCustomsText }}
+                                </p>
+                                <p>
+                                    {{ translated.step4AboutCustomsNote || texts.step4AboutCustomsNote }}
+                                </p>
+                            </div>
                         </div>
                     </div>
                 </div>

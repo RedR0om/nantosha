@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Product;
 use App\Models\Category;
 use App\Models\Brand;
+use App\Models\Setting;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -64,9 +65,25 @@ class ProductController extends Controller
             ->limit(4)
             ->get();
 
+        // Pass tax settings to frontend for calculating tax-inclusive prices
+        $taxSettings = [
+            'tax_enabled' => Setting::isEnabled('tax_enabled'),
+            'tax_rate' => (float)Setting::get('tax_rate', '10'),
+            'price_increase_percentage' => (float)Setting::get('price_increase_percentage', '10'),
+        ];
+
+        // Pass shipping settings to frontend for calculating shipping
+        $shippingSettings = [
+            'shipping_enabled' => Setting::isEnabled('shipping_enabled'),
+            'shipping_fee' => (float)Setting::get('shipping_fee', '500'),
+            'free_shipping_threshold' => (float)Setting::get('free_shipping_threshold', '10000'),
+        ];
+
         return Inertia::render('Products/Show', [
             'product' => $product,
             'relatedProducts' => $relatedProducts,
+            'taxSettings' => $taxSettings,
+            'shippingSettings' => $shippingSettings,
         ]);
     }
 

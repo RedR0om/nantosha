@@ -33,6 +33,7 @@ const props = defineProps<{
             quantity: number;
             price: number;
             total: number;
+            variant?: any;
         }>;
     };
 }>();
@@ -72,6 +73,24 @@ const getPaymentMethodLabel = (method: string) => {
 
 const getPaymentMethodIcon = (method: string) => {
     return method === 'bank_transfer' ? Banknote : CreditCard;
+};
+
+// Parse variant if it's a string
+const parseVariant = (item: any) => {
+    if (!item.variant) return null;
+    return typeof item.variant === 'string' ? JSON.parse(item.variant) : item.variant;
+};
+
+// Get tier information for display (if applicable)
+const getTierInfo = (item: any): string | null => {
+    const variant = parseVariant(item);
+    if (variant && variant.type === 'bottle' && variant.tier) {
+        const tier = variant.tier;
+        if (tier.capsules) {
+            return `${tier.capsules} capsules per bottle`;
+        }
+    }
+    return null;
 };
 
 onMounted(() => {
@@ -203,7 +222,10 @@ onMounted(() => {
                             <tbody class="divide-y divide-gray-200">
                                 <tr v-for="item in order.items" :key="item.id">
                                     <td class="px-4 py-4 text-sm font-medium text-gray-900">
-                                        {{ item.product_name }}
+                                        <div>{{ item.product_name }}</div>
+                                        <div v-if="getTierInfo(item)" class="text-xs text-gray-500 mt-1">
+                                            Tier: {{ getTierInfo(item) }}
+                                        </div>
                                     </td>
                                     <td class="px-4 py-4 text-sm text-gray-600 text-center">
                                         {{ item.product_sku || 'N/A' }}
@@ -230,6 +252,10 @@ onMounted(() => {
                             <div class="flex justify-between text-gray-600">
                                 <span>Subtotal:</span>
                                 <span>{{ formatPrice(order.subtotal) }}</span>
+                            </div>
+                            <div v-if="order.tax > 0" class="flex justify-between text-gray-600">
+                                <span>Tax (included):</span>
+                                <span>{{ formatPrice(order.tax) }}</span>
                             </div>
                             <div class="flex justify-between text-gray-600">
                                 <span>Shipping:</span>
