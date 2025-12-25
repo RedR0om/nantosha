@@ -26,5 +26,12 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        // Handle authentication exceptions for Inertia requests
+        $exceptions->respond(function (\Symfony\Component\HttpFoundation\Response $response, \Throwable $exception, \Illuminate\Http\Request $request) {
+            if ($exception instanceof \Illuminate\Auth\AuthenticationException || $exception instanceof \Illuminate\Auth\Access\AuthorizationException) {
+                if ($request->header('X-Inertia')) {
+                    return redirect()->route('login');
+                }
+            }
+        });
     })->create();

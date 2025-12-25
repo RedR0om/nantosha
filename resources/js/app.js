@@ -92,7 +92,7 @@ function resolvePageComponent(name) {
     return pageLoader().then(module => module.default || module);
 }
 
-createInertiaApp({
+const { router } = createInertiaApp({
     title: (title) => (title ? `${title} - ${appName}` : appName),
     resolve: (name) => {
         return resolvePageComponent(name);
@@ -106,6 +106,20 @@ createInertiaApp({
         color: '#4B5563',
     },
 });
+
+// Handle authentication errors globally
+if (router) {
+    router.on('error', (event) => {
+        if (event.detail?.response?.status === 401 || event.detail?.response?.status === 403) {
+            // Only redirect to login if we're not already on the login page
+            if (window.location.pathname !== '/login') {
+                router.visit('/login', {
+                    replace: true,
+                });
+            }
+        }
+    });
+}
 
 // This will set light / dark mode on page load...
 initializeTheme();
