@@ -122,7 +122,7 @@ const removeImage = (itemIndex?: number) => {
 
 // Reset multiple items when section type changes
 watch(() => form.section_type, (newType) => {
-    if (['award', 'publication', 'photo'].includes(newType)) {
+    if (['award', 'publication'].includes(newType)) {
         multipleItems.value = [{
             title: '',
             text: '',
@@ -261,12 +261,9 @@ const getPlaceholder = (field: string) => {
 };
 
 const submit = () => {
-    // If award, publication, or photo with multiple items, submit all at once
-    if (['award', 'publication', 'photo'].includes(form.section_type) && multipleItems.value.length > 0) {
+    // If award or publication with multiple items, submit all at once
+    if (['award', 'publication'].includes(form.section_type) && multipleItems.value.length > 0) {
         const itemsToSubmit = multipleItems.value.filter(item => {
-            if (form.section_type === 'photo') {
-                return item.title || item.caption || item.image || item.image_url;
-            }
             return item.title || item.text;
         });
         
@@ -276,8 +273,6 @@ const submit = () => {
         }
 
         // Create bulk form with items array
-        const images = itemsToSubmit.map(item => item.image).filter(img => img !== null);
-        
         const bulkForm = useForm({
             section_type: form.section_type,
             sort_order: form.sort_order,
@@ -285,40 +280,16 @@ const submit = () => {
             items: itemsToSubmit.map((item, index) => ({
                 title: item.title,
                 text: item.text || '',
-                caption: item.caption || '',
-                description: item.description || '',
-                image_url: item.image_url || '',
-                image_alt: item.image_alt || '',
                 key: item.key || `${form.section_type}${index + 1}`,
                 sort_order: form.sort_order + index,
             })),
         });
 
-        // Add images to form if any
-        if (images.length > 0) {
-            bulkForm.transform((data) => {
-                const formData = new FormData();
-                formData.append('section_type', data.section_type);
-                formData.append('sort_order', data.sort_order);
-                formData.append('is_active', data.is_active);
-                formData.append('items', JSON.stringify(data.items));
-                images.forEach((img, idx) => {
-                    if (img) {
-                        formData.append(`images[${idx}]`, img);
-                    }
-                });
-                return formData;
-            }).post('/admin/dr-landrito-profile', {
-                preserveScroll: true,
-                forceFormData: true,
-            });
-        } else {
-            bulkForm.post('/admin/dr-landrito-profile', {
-                preserveScroll: true,
-            });
-        }
+        bulkForm.post('/admin/dr-landrito-profile', {
+            preserveScroll: true,
+        });
     } else {
-        // Regular single entry submission
+        // Regular single entry submission (including photos)
         if (form.image) {
             form.transform((data) => ({
                 ...data,
@@ -379,8 +350,8 @@ const submit = () => {
                                 </p>
                             </div>
 
-                            <!-- Key (for page_title and single photos) -->
-                            <div v-if="showFields.key && !['award', 'publication', 'photo'].includes(form.section_type)">
+                            <!-- Key (for page_title and photos) -->
+                            <div v-if="showFields.key && !['award', 'publication'].includes(form.section_type)">
                                 <label class="block text-sm font-medium text-gray-700 mb-2">
                                     Identifier Key *
                                 </label>
@@ -415,14 +386,14 @@ const submit = () => {
                             </div>
 
                             <!-- Title -->
-                            <div v-if="showFields.title && !['award', 'publication', 'photo'].includes(form.section_type)">
+                            <div v-if="showFields.title && !['award', 'publication'].includes(form.section_type)">
                                 <label class="block text-sm font-medium text-gray-700 mb-2">
-                                    {{ getFieldLabel('title') }} *
+                                    {{ getFieldLabel('title') }} <span v-if="form.section_type !== 'photo'">*</span>
                                 </label>
                                 <input
                                     v-model="form.title"
                                     type="text"
-                                    required
+                                    :required="form.section_type !== 'photo'"
                                     class="w-full border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900"
                                     :placeholder="getPlaceholder('title')"
                                 />
@@ -465,8 +436,8 @@ const submit = () => {
                                 </p>
                             </div>
 
-                            <!-- Image Upload (only for single photo, not multiple) -->
-                            <div v-if="showFields.image_url && form.section_type !== 'photo'">
+                            <!-- Image Upload (for photos) -->
+                            <div v-if="showFields.image_url">
                                 <label class="block text-sm font-medium text-gray-700 mb-2">
                                     {{ getFieldLabel('image_url') }} *
                                 </label>
@@ -572,12 +543,12 @@ const submit = () => {
                                 </p>
                             </div>
 
-                            <!-- Multiple Items (Awards, Publications, Photos) -->
-                            <div v-if="['award', 'publication', 'photo'].includes(form.section_type)">
+                            <!-- Multiple Items (Awards, Publications only) -->
+                            <div v-if="['award', 'publication'].includes(form.section_type)">
                                 <div class="mb-4">
                                     <div class="flex items-center justify-between mb-3">
                                         <label class="block text-sm font-medium text-gray-700">
-                                            {{ form.section_type === 'award' ? 'Awards' : form.section_type === 'publication' ? 'Publications' : 'Photos' }} *
+                                            {{ form.section_type === 'award' ? 'Awards' : 'Publications' }} *
                                         </label>
                                         <button
                                             type="button"
@@ -585,7 +556,7 @@ const submit = () => {
                                             class="flex items-center gap-1 px-3 py-1.5 text-sm text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
                                         >
                                             <Plus class="w-4 h-4" />
-                                            Add {{ form.section_type === 'award' ? 'Award' : form.section_type === 'publication' ? 'Publication' : 'Photo' }}
+                                            Add {{ form.section_type === 'award' ? 'Award' : 'Publication' }}
                                         </button>
                                     </div>
                                     
@@ -597,7 +568,7 @@ const submit = () => {
                                         >
                                             <div class="flex items-start justify-between mb-3">
                                                 <span class="text-sm font-medium text-gray-700">
-                                                    {{ form.section_type === 'award' ? 'Award' : form.section_type === 'publication' ? 'Publication' : 'Photo' }} {{ index + 1 }}
+                                                    {{ form.section_type === 'award' ? 'Award' : 'Publication' }} {{ index + 1 }}
                                                 </span>
                                                 <button
                                                     v-if="multipleItems.length > 1"
@@ -624,7 +595,7 @@ const submit = () => {
                                             </div>
                                             
                                             <!-- Text (for awards and publications) -->
-                                            <div v-if="['award', 'publication'].includes(form.section_type)" class="mb-3">
+                                            <div class="mb-3">
                                                 <label class="block text-xs font-medium text-gray-600 mb-1">
                                                     {{ getFieldLabel('text') }} (Optional)
                                                 </label>
@@ -635,103 +606,10 @@ const submit = () => {
                                                     :placeholder="getPlaceholder('text')"
                                                 ></textarea>
                                             </div>
-                                            
-                                            <!-- Photo-specific fields -->
-                                            <template v-if="form.section_type === 'photo'">
-                                                <!-- Caption -->
-                                                <div class="mb-3">
-                                                    <label class="block text-xs font-medium text-gray-600 mb-1">
-                                                        {{ getFieldLabel('caption') }} *
-                                                    </label>
-                                                    <input
-                                                        v-model="item.caption"
-                                                        type="text"
-                                                        required
-                                                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900"
-                                                        :placeholder="getPlaceholder('caption')"
-                                                    />
-                                                </div>
-                                                
-                                                <!-- Description -->
-                                                <div class="mb-3">
-                                                    <label class="block text-xs font-medium text-gray-600 mb-1">
-                                                        {{ getFieldLabel('description') }} *
-                                                    </label>
-                                                    <textarea
-                                                        v-model="item.description"
-                                                        rows="3"
-                                                        required
-                                                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900"
-                                                        :placeholder="getPlaceholder('description')"
-                                                    ></textarea>
-                                                </div>
-                                                
-                                                <!-- Image Upload for Photo -->
-                                                <div class="mb-3">
-                                                    <label class="block text-xs font-medium text-gray-600 mb-1">
-                                                        Image *
-                                                    </label>
-                                                    
-                                                    <!-- Image Preview -->
-                                                    <div v-if="itemImagePreviews[index] || item.image_url" class="mb-2">
-                                                        <div class="relative inline-block">
-                                                            <img
-                                                                :src="itemImagePreviews[index] || item.image_url"
-                                                                alt="Preview"
-                                                                class="w-full max-w-xs h-48 object-cover border border-gray-200 rounded-lg"
-                                                            />
-                                                            <button
-                                                                type="button"
-                                                                @click="removeImage(index)"
-                                                                class="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
-                                                            >
-                                                                <X class="w-4 h-4" />
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                    
-                                                    <!-- Upload Button -->
-                                                    <label class="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer hover:bg-gray-50 hover:border-gray-400 transition-colors">
-                                                        <div class="flex flex-col items-center justify-center pt-3 pb-4">
-                                                            <Upload class="w-6 h-6 text-gray-400 mb-1" />
-                                                            <p class="text-xs text-gray-600">Click to upload image</p>
-                                                            <p class="text-xs text-gray-400 mt-1">PNG, JPG up to 5MB</p>
-                                                        </div>
-                                                        <input
-                                                            type="file"
-                                                            accept="image/*"
-                                                            @change="(e) => handleImageChange(e, index)"
-                                                            class="hidden"
-                                                        />
-                                                    </label>
-                                                    
-                                                    <!-- Manual URL Input -->
-                                                    <div class="mt-2">
-                                                        <p class="text-xs text-gray-500 mb-1">Or enter image URL:</p>
-                                                        <input
-                                                            v-model="item.image_url"
-                                                            type="url"
-                                                            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900"
-                                                            :placeholder="getPlaceholder('image_url')"
-                                                            @input="itemImagePreviews[index] = null; item.image = null"
-                                                        />
-                                                    </div>
-                                                    
-                                                    <!-- Image Alt Text -->
-                                                    <div class="mt-2">
-                                                        <input
-                                                            v-model="item.image_alt"
-                                                            type="text"
-                                                            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900"
-                                                            :placeholder="getPlaceholder('image_alt')"
-                                                        />
-                                                    </div>
-                                                </div>
-                                            </template>
                                         </div>
                                         
                                         <p v-if="multipleItems.length === 0" class="text-xs text-gray-500 italic">
-                                            Click "Add {{ form.section_type === 'award' ? 'Award' : form.section_type === 'publication' ? 'Publication' : 'Photo' }}" to add items
+                                            Click "Add {{ form.section_type === 'award' ? 'Award' : 'Publication' }}" to add items
                                         </p>
                                     </div>
                                 </div>
