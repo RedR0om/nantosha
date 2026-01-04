@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { Head, Link, usePage } from '@inertiajs/vue3';
-import { computed, onMounted } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import PublicNav from '@/components/PublicNav.vue';
 import { Printer, CheckCircle, Package, Truck, CreditCard, Banknote } from 'lucide-vue-next';
+import { useLanguage } from '@/composables/useLanguage';
+import { translateText } from '@/composables/useTranslation';
 
 const props = defineProps<{
     order: {
@@ -39,10 +41,66 @@ const props = defineProps<{
 }>();
 
 const page = usePage();
+const { language } = useLanguage();
+
 const successMessage = computed(() => {
     const flash = page.props.flash as any;
     return flash?.success || null;
 });
+
+// Translation texts
+const texts = ref({
+    backToHome: '← Back to Home',
+    printReceipt: 'Print Receipt',
+    orderReceipt: 'Order Receipt',
+    orderInformation: 'Order Information',
+    orderNumber: 'Order Number:',
+    orderDate: 'Order Date:',
+    status: 'Status:',
+    paymentStatus: 'Payment Status:',
+    customerInformation: 'Customer Information',
+    name: 'Name:',
+    email: 'Email:',
+    phone: 'Phone:',
+    shippingAddress: 'Shipping Address',
+    orderItems: 'Order Items',
+    product: 'Product',
+    sku: 'SKU',
+    quantity: 'Quantity',
+    price: 'Price',
+    total: 'Total',
+    tier: 'Tier:',
+    capsulesPerBottle: 'capsules per bottle',
+    na: 'N/A',
+    subtotal: 'Subtotal:',
+    taxIncluded: 'Tax (included):',
+    shipping: 'Shipping:',
+    free: 'Free',
+    paymentMethod: 'Payment Method',
+    bankTransfer: 'Bank Transfer',
+    creditCard: 'Credit Card',
+    thankYou: 'Thank you for your order!',
+    inquiries: 'For any inquiries, please contact us at support@nantosha.com',
+    success: 'Success!',
+});
+
+const translated = ref<Record<string, string>>({});
+
+const translateAll = async () => {
+    const keys = Object.keys(texts.value) as Array<keyof typeof texts.value>;
+    for (const key of keys) {
+        if (texts.value[key]) {
+            try {
+                translated.value[key] = await translateText(texts.value[key], language.value, 'auto');
+            } catch (error) {
+                translated.value[key] = texts.value[key];
+            }
+        }
+    }
+};
+
+watch(language, translateAll, { immediate: true });
+onMounted(translateAll);
 
 const formatPrice = (price: number) => {
     return new Intl.NumberFormat('ja-JP', {
@@ -68,7 +126,10 @@ const printReceipt = () => {
 };
 
 const getPaymentMethodLabel = (method: string) => {
-    return method === 'bank_transfer' ? 'Bank Transfer' : 'Credit Card';
+    if (method === 'bank_transfer') {
+        return translated.value.bankTransfer || texts.value.bankTransfer;
+    }
+    return translated.value.creditCard || texts.value.creditCard;
 };
 
 const getPaymentMethodIcon = (method: string) => {
@@ -87,7 +148,8 @@ const getTierInfo = (item: any): string | null => {
     if (variant && variant.type === 'bottle' && variant.tier) {
         const tier = variant.tier;
         if (tier.capsules) {
-            return `${tier.capsules} capsules per bottle`;
+            const capsulesText = translated.value.capsulesPerBottle || texts.value.capsulesPerBottle;
+            return `${tier.capsules} ${capsulesText}`;
         }
     }
     return null;
@@ -116,7 +178,7 @@ onMounted(() => {
             <div v-if="successMessage" class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-6" role="alert">
                 <div class="flex items-center gap-2">
                     <CheckCircle class="w-5 h-5" />
-                    <strong class="font-bold">Success!</strong>
+                    <strong class="font-bold">{{ translated.success || texts.success }}</strong>
                     <span class="block sm:inline">{{ successMessage }}</span>
                 </div>
             </div>
@@ -127,14 +189,14 @@ onMounted(() => {
                     href="/"
                     class="text-gray-600 hover:text-gray-900 font-medium"
                 >
-                    ← Back to Home
+                    {{ translated.backToHome || texts.backToHome }}
                 </Link>
                 <button
                     @click="printReceipt"
                     class="flex items-center gap-2 bg-gray-900 text-white px-6 py-3 rounded-lg font-semibold hover:bg-gray-800 transition uppercase tracking-wide"
                 >
                     <Printer class="w-5 h-5" />
-                    Print Receipt
+                    {{ translated.printReceipt || texts.printReceipt }}
                 </button>
             </div>
 
@@ -144,28 +206,28 @@ onMounted(() => {
                 <div class="text-center mb-8 border-b border-gray-200 pb-6">
                     <h1 class="text-3xl font-bold text-gray-900 mb-2">Nantosha Import & Export Division</h1>
                     <p class="text-gray-600 mb-1">南東舎輸出入部</p>
-                    <p class="text-sm text-gray-500">Order Receipt</p>
+                    <p class="text-sm text-gray-500">{{ translated.orderReceipt || texts.orderReceipt }}</p>
                 </div>
 
                 <!-- Order Info -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                     <div>
-                        <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">Order Information</h3>
+                        <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">{{ translated.orderInformation || texts.orderInformation }}</h3>
                         <div class="space-y-2 text-sm">
                             <div class="flex justify-between">
-                                <span class="text-gray-600">Order Number:</span>
+                                <span class="text-gray-600">{{ translated.orderNumber || texts.orderNumber }}</span>
                                 <span class="font-semibold text-gray-900">{{ order.order_number }}</span>
                             </div>
                             <div class="flex justify-between">
-                                <span class="text-gray-600">Order Date:</span>
+                                <span class="text-gray-600">{{ translated.orderDate || texts.orderDate }}</span>
                                 <span class="font-semibold text-gray-900">{{ formatDate(order.created_at) }}</span>
                             </div>
                             <div class="flex justify-between">
-                                <span class="text-gray-600">Status:</span>
+                                <span class="text-gray-600">{{ translated.status || texts.status }}</span>
                                 <span class="font-semibold text-gray-900 capitalize">{{ order.status }}</span>
                             </div>
                             <div class="flex justify-between">
-                                <span class="text-gray-600">Payment Status:</span>
+                                <span class="text-gray-600">{{ translated.paymentStatus || texts.paymentStatus }}</span>
                                 <span class="font-semibold capitalize"
                                     :class="order.payment_status === 'paid' ? 'text-green-600' : 'text-orange-600'"
                                 >
@@ -175,18 +237,18 @@ onMounted(() => {
                         </div>
                     </div>
                     <div>
-                        <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">Customer Information</h3>
+                        <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">{{ translated.customerInformation || texts.customerInformation }}</h3>
                         <div class="space-y-2 text-sm">
                             <div>
-                                <span class="text-gray-600">Name:</span>
+                                <span class="text-gray-600">{{ translated.name || texts.name }}</span>
                                 <span class="font-semibold text-gray-900 ml-2">{{ order.first_name }} {{ order.last_name }}</span>
                             </div>
                             <div>
-                                <span class="text-gray-600">Email:</span>
+                                <span class="text-gray-600">{{ translated.email || texts.email }}</span>
                                 <span class="font-semibold text-gray-900 ml-2">{{ order.email }}</span>
                             </div>
                             <div>
-                                <span class="text-gray-600">Phone:</span>
+                                <span class="text-gray-600">{{ translated.phone || texts.phone }}</span>
                                 <span class="font-semibold text-gray-900 ml-2">{{ order.phone }}</span>
                             </div>
                         </div>
@@ -195,7 +257,7 @@ onMounted(() => {
 
                 <!-- Shipping Address -->
                 <div class="mb-8 border-b border-gray-200 pb-6">
-                    <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">Shipping Address</h3>
+                    <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">{{ translated.shippingAddress || texts.shippingAddress }}</h3>
                     <div class="text-sm text-gray-900">
                         <p class="font-semibold">{{ order.first_name }} {{ order.last_name }}</p>
                         <p>{{ order.address_line_1 }}</p>
@@ -207,16 +269,16 @@ onMounted(() => {
 
                 <!-- Order Items -->
                 <div class="mb-8">
-                    <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-4">Order Items</h3>
+                    <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-4">{{ translated.orderItems || texts.orderItems }}</h3>
                     <div class="overflow-x-auto">
                         <table class="w-full">
                             <thead class="bg-gray-50">
                                 <tr>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Product</th>
-                                    <th class="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">SKU</th>
-                                    <th class="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">Quantity</th>
-                                    <th class="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">Price</th>
-                                    <th class="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">Total</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">{{ translated.product || texts.product }}</th>
+                                    <th class="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">{{ translated.sku || texts.sku }}</th>
+                                    <th class="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">{{ translated.quantity || texts.quantity }}</th>
+                                    <th class="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">{{ translated.price || texts.price }}</th>
+                                    <th class="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">{{ translated.total || texts.total }}</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-200">
@@ -224,11 +286,11 @@ onMounted(() => {
                                     <td class="px-4 py-4 text-sm font-medium text-gray-900">
                                         <div>{{ item.product_name }}</div>
                                         <div v-if="getTierInfo(item)" class="text-xs text-gray-500 mt-1">
-                                            Tier: {{ getTierInfo(item) }}
+                                            {{ translated.tier || texts.tier }} {{ getTierInfo(item) }}
                                         </div>
                                     </td>
                                     <td class="px-4 py-4 text-sm text-gray-600 text-center">
-                                        {{ item.product_sku || 'N/A' }}
+                                        {{ item.product_sku || (translated.na || texts.na) }}
                                     </td>
                                     <td class="px-4 py-4 text-sm text-gray-600 text-center">
                                         {{ item.quantity }}
@@ -250,19 +312,19 @@ onMounted(() => {
                     <div class="max-w-md ml-auto">
                         <div class="space-y-2 text-sm">
                             <div class="flex justify-between text-gray-600">
-                                <span>Subtotal:</span>
+                                <span>{{ translated.subtotal || texts.subtotal }}</span>
                                 <span>{{ formatPrice(order.subtotal) }}</span>
                             </div>
                             <div v-if="order.tax > 0" class="flex justify-between text-gray-600">
-                                <span>Tax (included):</span>
+                                <span>{{ translated.taxIncluded || texts.taxIncluded }}</span>
                                 <span>{{ formatPrice(order.tax) }}</span>
                             </div>
                             <div class="flex justify-between text-gray-600">
-                                <span>Shipping:</span>
-                                <span>{{ order.shipping === 0 ? 'Free' : formatPrice(order.shipping) }}</span>
+                                <span>{{ translated.shipping || texts.shipping }}</span>
+                                <span>{{ order.shipping === 0 ? (translated.free || texts.free) : formatPrice(order.shipping) }}</span>
                             </div>
                             <div class="border-t border-gray-200 pt-2 mt-2 flex justify-between text-lg font-bold text-gray-900">
-                                <span>Total:</span>
+                                <span>{{ translated.total || texts.total }}</span>
                                 <span>{{ formatPrice(order.total) }}</span>
                             </div>
                         </div>
@@ -271,7 +333,7 @@ onMounted(() => {
 
                 <!-- Payment Method -->
                 <div class="border-t border-gray-200 pt-6 mb-8">
-                    <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">Payment Method</h3>
+                    <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">{{ translated.paymentMethod || texts.paymentMethod }}</h3>
                     <div class="flex items-center gap-3">
                         <component :is="getPaymentMethodIcon(order.payment_method)" class="w-5 h-5 text-gray-600" />
                         <span class="text-sm font-medium text-gray-900">{{ getPaymentMethodLabel(order.payment_method) }}</span>
@@ -280,8 +342,8 @@ onMounted(() => {
 
                 <!-- Footer -->
                 <div class="border-t border-gray-200 pt-6 text-center text-xs text-gray-500">
-                    <p>Thank you for your order!</p>
-                    <p class="mt-2">For any inquiries, please contact us at support@nantosha.com</p>
+                    <p>{{ translated.thankYou || texts.thankYou }}</p>
+                    <p class="mt-2">{{ translated.inquiries || texts.inquiries }}</p>
                 </div>
             </div>
         </div>

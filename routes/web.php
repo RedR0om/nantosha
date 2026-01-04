@@ -65,6 +65,9 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
     Route::resource('carousel', \App\Http\Controllers\Admin\CarouselController::class);
     Route::resource('homepage-sections', \App\Http\Controllers\Admin\HomePageSectionController::class);
     Route::resource('faqs', \App\Http\Controllers\Admin\FaqController::class);
+    Route::resource('dr-landrito-profile', \App\Http\Controllers\Admin\DrLandritoProfileController::class);
+    Route::resource('corporate-profile', \App\Http\Controllers\Admin\CorporateProfileController::class);
+    Route::resource('checkout-content', \App\Http\Controllers\Admin\CheckoutContentController::class);
     Route::get('inventory', [InventoryController::class, 'index'])->name('inventory.index');
     Route::put('inventory/{product}', [InventoryController::class, 'update'])->name('inventory.update');
     Route::post('inventory/bulk-update', [InventoryController::class, 'bulkUpdate'])->name('inventory.bulk-update');

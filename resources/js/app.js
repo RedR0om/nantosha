@@ -61,6 +61,15 @@ const pages = {
     'Admin/HomePageSections/Edit': () => import('./pages/Admin/HomePageSections/Edit.vue'),
     'Admin/Inquiries/Index': () => import('./pages/Admin/Inquiries/Index.vue'),
     'Admin/Inquiries/Show': () => import('./pages/Admin/Inquiries/Show.vue'),
+    'Admin/DrLandritoProfile/Index': () => import('./pages/Admin/DrLandritoProfile/Index.vue'),
+    'Admin/DrLandritoProfile/Create': () => import('./pages/Admin/DrLandritoProfile/Create.vue'),
+    'Admin/DrLandritoProfile/Edit': () => import('./pages/Admin/DrLandritoProfile/Edit.vue'),
+    'Admin/CorporateProfile/Index': () => import('./pages/Admin/CorporateProfile/Index.vue'),
+    'Admin/CorporateProfile/Create': () => import('./pages/Admin/CorporateProfile/Create.vue'),
+    'Admin/CorporateProfile/Edit': () => import('./pages/Admin/CorporateProfile/Edit.vue'),
+    'Admin/CheckoutContent/Index': () => import('./pages/Admin/CheckoutContent/Index.vue'),
+    'Admin/CheckoutContent/Create': () => import('./pages/Admin/CheckoutContent/Create.vue'),
+    'Admin/CheckoutContent/Edit': () => import('./pages/Admin/CheckoutContent/Edit.vue'),
     
     // Information pages
     'HowToOrder': () => import('./pages/HowToOrder.vue'),

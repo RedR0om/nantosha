@@ -4,7 +4,7 @@ import { dashboard } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link } from '@inertiajs/vue3';
 import { ref, watch, onMounted } from 'vue';
-import { Package, ShoppingBag, TrendingUp, Users, DollarSign, Image, Settings, ShoppingCart, HelpCircle, Tag, Folder, Layout, Mail } from 'lucide-vue-next';
+import { Package, ShoppingBag, TrendingUp, Users, DollarSign, Image, Settings, ShoppingCart, HelpCircle, Tag, Folder, Layout, Mail, UserCircle } from 'lucide-vue-next';
 import { useLanguage } from '@/composables/useLanguage';
 import { translateText } from '@/composables/useTranslation';
 
@@ -57,6 +57,12 @@ const texts = ref({
     manageCategoriesDesc: 'Add and manage product categories',
     manageInquiries: 'Manage Inquiries',
     manageInquiriesDesc: 'View and respond to customer inquiries',
+    manageDrLandritoProfile: 'Dr. Landrito Profile',
+    manageDrLandritoProfileDesc: 'Manage content for Dr. Landrito profile page',
+    manageCorporateProfile: 'Corporate Profile',
+    manageCorporateProfileDesc: 'Manage content for Corporate Profile page',
+    manageCheckoutContent: 'Checkout Content',
+    manageCheckoutContentDesc: 'Manage Risks, Prohibitions, and Shipping information',
     totalProducts: 'Total Products',
     activeProducts: 'Active Products',
     totalSales: 'Total Sales',
@@ -217,6 +223,45 @@ onMounted(translateAll);
                     </div>
                     <h3 class="text-lg font-semibold text-gray-900 mb-1">{{ translated.manageInquiries || texts.manageInquiries }}</h3>
                     <p class="text-sm text-gray-600">{{ translated.manageInquiriesDesc || texts.manageInquiriesDesc }}</p>
+                </Link>
+
+                <Link
+                    href="/admin/dr-landrito-profile"
+                    class="group bg-white border border-gray-200 rounded-lg p-6 hover:border-gray-900 hover:shadow-lg transition-all"
+                >
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-12 h-12 bg-gray-900 rounded-lg flex items-center justify-center group-hover:bg-gray-800 transition-colors">
+                            <UserCircle class="w-6 h-6 text-white" />
+                        </div>
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-1">{{ translated.manageDrLandritoProfile || texts.manageDrLandritoProfile }}</h3>
+                    <p class="text-sm text-gray-600">{{ translated.manageDrLandritoProfileDesc || texts.manageDrLandritoProfileDesc }}</p>
+                </Link>
+
+                <Link
+                    href="/admin/corporate-profile"
+                    class="group bg-white border border-gray-200 rounded-lg p-6 hover:border-gray-900 hover:shadow-lg transition-all"
+                >
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-12 h-12 bg-gray-900 rounded-lg flex items-center justify-center group-hover:bg-gray-800 transition-colors">
+                            <Layout class="w-6 h-6 text-white" />
+                        </div>
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-1">{{ translated.manageCorporateProfile || texts.manageCorporateProfile }}</h3>
+                    <p class="text-sm text-gray-600">{{ translated.manageCorporateProfileDesc || texts.manageCorporateProfileDesc }}</p>
+                </Link>
+
+                <Link
+                    href="/admin/checkout-content"
+                    class="group bg-white border border-gray-200 rounded-lg p-6 hover:border-gray-900 hover:shadow-lg transition-all"
+                >
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-12 h-12 bg-gray-900 rounded-lg flex items-center justify-center group-hover:bg-gray-800 transition-colors">
+                            <ShoppingCart class="w-6 h-6 text-white" />
+                        </div>
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-1">{{ translated.manageCheckoutContent || texts.manageCheckoutContent }}</h3>
+                    <p class="text-sm text-gray-600">{{ translated.manageCheckoutContentDesc || texts.manageCheckoutContentDesc }}</p>
                 </Link>
             </div>
 

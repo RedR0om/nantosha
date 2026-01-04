@@ -2,6 +2,8 @@
 import { ref, computed, watch, onMounted } from 'vue';
 import { Link, router, usePage } from '@inertiajs/vue3';
 import { X, ShoppingCart, Plus, Minus, Trash2 } from 'lucide-vue-next';
+import { useLanguage } from '@/composables/useLanguage';
+import { translateText } from '@/composables/useTranslation';
 
 const props = defineProps<{
     isOpen: boolean;
@@ -16,6 +18,7 @@ const emit = defineEmits<{
     (e: 'close'): void;
 }>();
 
+const { language } = useLanguage();
 const page = usePage();
 const isLoading = ref(false);
 const localCartItems = ref<any[]>(props.cartItems || []);
@@ -25,6 +28,48 @@ const localShipping = ref(props.shipping || 0);
 const localTotal = ref(props.total || 0);
 const editingQuantities = ref<{ [key: number]: number }>({});
 const errorMessages = ref<{ [key: number]: string }>({});
+
+// Translation texts
+const texts = ref({
+    yourCart: 'Your Cart',
+    closeCart: 'Close cart',
+    loading: 'Loading...',
+    cartEmpty: 'Your cart is empty',
+    continueShoppingDesc: 'Continue shopping to add items to your cart',
+    continueShopping: 'Continue Shopping',
+    noImage: 'No Image',
+    selectPricingTier: 'Select Pricing Tier',
+    bottle: 'bottle',
+    bottles: 'bottles',
+    capsulesTotal: 'capsules total',
+    each: 'each',
+    subtotal: 'Subtotal',
+    taxIncluded: 'Tax (included)',
+    shipping: 'Shipping',
+    free: 'Free',
+    total: 'Total',
+    checkout: 'Check out',
+    caps: 'caps',
+    cap: '/cap',
+});
+
+const translated = ref<Record<string, string>>({});
+
+const translateAll = async () => {
+    const keys = Object.keys(texts.value) as Array<keyof typeof texts.value>;
+    for (const key of keys) {
+        if (texts.value[key]) {
+            try {
+                translated.value[key] = await translateText(texts.value[key], language.value, 'auto');
+            } catch (error) {
+                translated.value[key] = texts.value[key];
+            }
+        }
+    }
+};
+
+watch(language, translateAll, { immediate: true });
+onMounted(translateAll);
 
 // Track if we're currently updating an item to prevent props from overwriting local changes
 const updatingItems = ref<Set<number>>(new Set());
@@ -580,7 +625,7 @@ onMounted(() => {
                 <div class="flex items-center gap-3">
                     <ShoppingCart class="w-5 h-5 text-gray-900" />
                     <h2 class="text-lg font-semibold text-gray-900 tracking-tight">
-                        Your Cart
+                        {{ translated.yourCart || texts.yourCart }}
                     </h2>
                     <span v-if="localCartItems.length > 0" class="text-sm text-gray-600">
                         ({{ localCartItems.length }})
@@ -589,7 +634,7 @@ onMounted(() => {
                 <button
                     @click="closeSidebar"
                     class="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                    aria-label="Close cart"
+                    :aria-label="translated.closeCart || texts.closeCart"
                 >
                     <X class="w-5 h-5 text-gray-600" />
                 </button>
@@ -598,21 +643,21 @@ onMounted(() => {
             <!-- Cart Content -->
             <div class="flex-1 overflow-y-auto">
                 <div v-if="isLoading" class="flex items-center justify-center h-64">
-                    <div class="text-gray-600">Loading...</div>
+                    <div class="text-gray-600">{{ translated.loading || texts.loading }}</div>
                 </div>
                 
                 <div v-else-if="localCartItems.length === 0" class="flex flex-col items-center justify-center h-full p-6">
                     <ShoppingCart class="w-16 h-16 text-gray-300 mb-4" />
-                    <p class="text-gray-600 text-lg mb-2">Your cart is empty</p>
+                    <p class="text-gray-600 text-lg mb-2">{{ translated.cartEmpty || texts.cartEmpty }}</p>
                     <p class="text-gray-500 text-sm mb-6 text-center">
-                        Continue shopping to add items to your cart
+                        {{ translated.continueShoppingDesc || texts.continueShoppingDesc }}
                     </p>
                     <Link
                         href="/products"
                         @click="closeSidebar"
                         class="bg-gray-900 text-white px-6 py-3 text-sm font-medium hover:bg-gray-800 transition-colors uppercase tracking-wide rounded-lg"
                     >
-                        Continue Shopping
+                        {{ translated.continueShopping || texts.continueShopping }}
                     </Link>
                 </div>
 
@@ -633,7 +678,7 @@ onMounted(() => {
                                 v-else
                                 class="w-full h-full flex items-center justify-center text-xs text-gray-400"
                             >
-                                No Image
+                                {{ translated.noImage || texts.noImage }}
                             </div>
                         </div>
                         
@@ -644,7 +689,7 @@ onMounted(() => {
                             
                             <!-- Bottle-based pricing tier selection -->
                             <div v-if="item.product?.is_bottle_based && item.product?.bottle_pricing_tiers && item.product.bottle_pricing_tiers.length > 0" class="mb-3" @click.stop>
-                                <label class="block text-xs font-medium text-gray-700 mb-2">Select Pricing Tier</label>
+                                <label class="block text-xs font-medium text-gray-700 mb-2">{{ translated.selectPricingTier || texts.selectPricingTier }}</label>
                                 <div class="space-y-1.5">
                                     <button
                                         v-for="(tier, index) in item.product.bottle_pricing_tiers"
@@ -661,22 +706,22 @@ onMounted(() => {
                                     >
                                         <div class="flex justify-between items-center">
                                             <div>
-                                                <div class="font-semibold text-gray-900">{{ tier.capsules }} caps</div>
-                                                <div class="text-xs text-gray-500">¥{{ Math.round(getPricePerCapsule(tier)).toLocaleString() }}/cap</div>
+                                                <div class="font-semibold text-gray-900">{{ tier.capsules }} {{ translated.caps || texts.caps }}</div>
+                                                <div class="text-xs text-gray-500">¥{{ Math.round(getPricePerCapsule(tier)).toLocaleString() }}{{ translated.cap || texts.cap }}</div>
                                             </div>
                                             <div class="text-sm font-bold text-gray-900">¥{{ tier.price.toLocaleString() }}</div>
                                         </div>
                                     </button>
                                 </div>
                                 <p v-if="item.variant && item.variant.bottles" class="text-xs text-gray-600 mt-2">
-                                    {{ item.variant.bottles }} {{ item.variant.bottles === 1 ? 'bottle' : 'bottles' }} 
-                                    ({{ item.variant.total_capsules }} capsules total)
+                                    {{ item.variant.bottles }} {{ item.variant.bottles === 1 ? (translated.bottle || texts.bottle) : (translated.bottles || texts.bottles) }} 
+                                    ({{ item.variant.total_capsules }} {{ translated.capsulesTotal || texts.capsulesTotal }})
                                 </p>
                             </div>
                             
                             <!-- Regular price display for non-bottle products -->
                             <p v-else class="text-xs text-gray-600 mb-3">
-                                {{ formatPrice(item.price) }} each
+                                {{ formatPrice(item.price) }} {{ translated.each || texts.each }}
                             </p>
                             
                             <!-- Error message for this item -->
@@ -748,23 +793,23 @@ onMounted(() => {
             <div v-if="localCartItems.length > 0" class="border-t border-gray-200 p-6 bg-gray-50">
                 <div class="space-y-3 mb-6">
                     <div class="flex justify-between text-sm text-gray-600">
-                        <span>Subtotal</span>
+                        <span>{{ translated.subtotal || texts.subtotal }}</span>
                         <span>{{ formatPrice(localSubtotal) }}</span>
                     </div>
                     <div v-if="localTax > 0" class="flex justify-between text-sm text-gray-600">
-                        <span>Tax (included)</span>
+                        <span>{{ translated.taxIncluded || texts.taxIncluded }}</span>
                         <span>{{ formatPrice(localTax) }}</span>
                     </div>
                     <div v-if="localShipping > 0" class="flex justify-between text-sm text-gray-600">
-                        <span>Shipping</span>
+                        <span>{{ translated.shipping || texts.shipping }}</span>
                         <span>{{ formatPrice(localShipping) }}</span>
                     </div>
                     <div v-else-if="localSubtotal > 0" class="flex justify-between text-xs text-gray-500">
-                        <span>Shipping</span>
-                        <span>Free</span>
+                        <span>{{ translated.shipping || texts.shipping }}</span>
+                        <span>{{ translated.free || texts.free }}</span>
                     </div>
                     <div class="border-t border-gray-200 pt-3 flex justify-between text-base font-bold text-gray-900">
-                        <span>Total</span>
+                        <span>{{ translated.total || texts.total }}</span>
                         <span>{{ formatPrice(localTotal) }}</span>
                     </div>
                 </div>
@@ -775,7 +820,7 @@ onMounted(() => {
                         @click="closeSidebar"
                         class="block w-full bg-gray-900 text-white py-3 text-sm font-semibold text-center hover:bg-gray-800 transition-colors uppercase tracking-wide rounded-lg"
                     >
-                        Check out
+                        {{ translated.checkout || texts.checkout }}
                     </Link>
                     <Link
                         href="/cart"

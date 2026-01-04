@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\CartItem;
 use App\Models\Setting;
+use App\Models\CheckoutContent;
 use App\Services\PriceCalculationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -88,6 +89,14 @@ class CheckoutController extends Controller
             'price_increase_percentage' => (float)Setting::get('price_increase_percentage', '10'),
         ];
 
+        // Fetch dynamic checkout content
+        $contents = CheckoutContent::where('is_active', true)
+            ->orderBy('section_type')
+            ->orderBy('sort_order')
+            ->orderBy('created_at', 'asc')
+            ->get()
+            ->groupBy('section_type');
+
         return Inertia::render('Checkout', [
             'cartItems' => $availableItems,
             'subtotal' => $subtotal,
@@ -95,6 +104,7 @@ class CheckoutController extends Controller
             'shipping' => $shipping,
             'total' => $total,
             'taxSettings' => $taxSettings,
+            'contents' => $contents,
         ]);
     }
 

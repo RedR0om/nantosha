@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { Head, router, Link } from '@inertiajs/vue3';
-import { ref, computed } from 'vue';
+import { ref, computed, watch, onMounted } from 'vue';
 import PublicNav from '@/components/PublicNav.vue';
 import { AlertTriangle, FileText, CheckCircle, ShoppingCart } from 'lucide-vue-next';
+import { useLanguage } from '@/composables/useLanguage';
+import { translateText } from '@/composables/useTranslation';
 
 const props = defineProps<{
     cartItems: any[];
@@ -15,6 +17,7 @@ const props = defineProps<{
         tax_rate: number;
         price_increase_percentage: number;
     };
+    contents?: Record<string, any[]>;
 }>();
 
 const form = ref({
@@ -48,9 +51,262 @@ const form = ref({
     resale_prohibited: false,
 });
 
+const { language } = useLanguage();
+
 const currentStep = ref(1);
 const totalSteps = 5;
 const errors = ref<Record<string, string>>({});
+
+// Translation texts
+const texts = ref({
+    checkout: 'Checkout',
+    confirmAmount: 'Confirm Amount',
+    customerInfo: 'Customer Info',
+    shipping: 'Shipping',
+    risks: 'Risks',
+    risksAndProhibitions: 'Risks & Prohibitions',
+    shippingAndCustoms: 'Shipping & Customs Information',
+    review: 'Review',
+    pleaseFixErrors: 'Please fix the following errors:',
+    pleaseReviewCart: 'Please review your cart items and amounts before proceeding.',
+    orderSummary: 'Order Summary',
+    subtotal: 'Subtotal:',
+    taxIncluded: 'Tax (included):',
+    shippingLabel: 'Shipping:',
+    free: 'Free',
+    total: 'Total:',
+    modifyQuantities: 'You can modify quantities in your',
+    cart: 'cart',
+    beforeCheckout: 'before proceeding to checkout.',
+    customerInformation: 'Customer Information & Health Check Sheet',
+    email: 'Email',
+    phone: 'Phone',
+    firstName: 'First Name',
+    lastName: 'Last Name',
+    healthCheckSheet: 'Health Check Sheet',
+    healthCheckDescription: 'This information helps the manufacturing doctor provide minimal advice based on your health information.',
+    age: 'Age',
+    weight: 'Weight (kg)',
+    height: 'Height (cm)',
+    pregnancyStatus: 'Pregnancy Status',
+    select: 'Select...',
+    notApplicable: 'Not Applicable',
+    notPregnant: 'Not Pregnant',
+    pregnant: 'Pregnant',
+    breastfeeding: 'Breastfeeding',
+    currentMedications: 'Current Medications',
+    currentMedicationsPlaceholder: 'List any medications you are currently taking',
+    allergies: 'Allergies',
+    allergiesPlaceholder: 'List any known allergies',
+    medicalConditions: 'Medical Conditions',
+    medicalConditionsPlaceholder: 'List any medical conditions',
+    reasonForUse: 'Reason for Use',
+    reasonForUsePlaceholder: 'Please describe the reason for using this medication',
+    previousIvermectinUse: 'Have you used Ivermectin before?',
+    yes: 'Yes',
+    no: 'No',
+    quantity: 'Quantity:',
+    bottle: 'bottle',
+    bottles: 'bottles',
+    tier: 'Tier:',
+    capsulesPerBottle: 'capsules per bottle',
+    addressLine1: 'Address Line 1',
+    addressLine2: 'Address Line 2 (Optional)',
+    city: 'City',
+    state: 'State / Province',
+    postalCode: 'Postal Code',
+    country: 'Country',
+    paymentMethod: 'Payment Method',
+    bankTransfer: 'Bank Transfer',
+    riskAcknowledgment: 'Risk Acknowledgment',
+    riskAcknowledgmentText: 'I acknowledge that I understand the risks associated with using this medication and have consulted with a healthcare professional.',
+    resaleProhibited: 'I agree not to resell this medication.',
+    risksLabel: 'Risks:',
+    prohibitionsLabel: 'Prohibitions:',
+    riskAcknowledgmentDefault: 'I acknowledge the risks of self-medication and understand that I am responsible for my personal import. *',
+    resaleProhibitedDefault: 'I understand that resale or transfer to third parties is strictly prohibited. *',
+    reviewOrder: 'Review Your Order',
+    placeOrder: 'Place Order',
+    back: 'Back',
+    next: 'Next',
+    previous: 'Previous',
+    shippingAddress: 'Shipping Address',
+    phoneLabel: 'Phone:',
+    emailLabel: 'Email:',
+    creditCard: 'Credit Card',
+    bankTransferDescription: 'Transfer funds directly to our bank account. You will receive payment instructions after confirming your order.',
+    creditCardDescription: 'Pay securely with your credit card. You will be redirected to our secure payment gateway.',
+    paymentInstructions: 'Payment instructions will be provided after order confirmation.',
+});
+
+const translated = ref<Record<string, string>>({});
+
+const translateAll = async () => {
+    const keys = Object.keys(texts.value) as Array<keyof typeof texts.value>;
+    for (const key of keys) {
+        if (texts.value[key]) {
+            try {
+                translated.value[key] = await translateText(texts.value[key], language.value, 'auto');
+            } catch (error) {
+                translated.value[key] = texts.value[key];
+            }
+        }
+    }
+};
+
+watch(language, translateAll, { immediate: true });
+onMounted(translateAll);
+
+// Helper functions to get dynamic content
+const getContent = (sectionType: string, key?: string) => {
+    if (!props.contents || !props.contents[sectionType]) return null;
+    const sectionContents = props.contents[sectionType];
+    if (key) {
+        return sectionContents.find(c => c.key === key) || sectionContents[0] || null;
+    }
+    return sectionContents[0] || null;
+};
+
+const getContents = (sectionType: string) => {
+    if (!props.contents || !props.contents[sectionType]) return [];
+    return props.contents[sectionType];
+};
+
+// Get risks and prohibitions content
+const risksContent = computed(() => {
+    const all = getContents('risks_prohibitions');
+    return all.filter(c => {
+        const key = c.key?.toLowerCase() || '';
+        const title = c.title?.toLowerCase() || '';
+        return key.includes('risk') || title.includes('risk') || (!c.key && !title.includes('prohibition'));
+    });
+});
+
+const prohibitionsContent = computed(() => {
+    const all = getContents('risks_prohibitions');
+    const riskKeys = risksContent.value.map(c => c.id);
+    return all.filter(c => {
+        const key = c.key?.toLowerCase() || '';
+        const title = c.title?.toLowerCase() || '';
+        return (key.includes('prohibition') || title.includes('prohibition')) && !riskKeys.includes(c.id);
+    });
+});
+
+const shippingContent = computed(() => getContents('shipping_customs'));
+
+// Translated content for risks, prohibitions, and shipping
+const translatedRisksContent = ref<Record<number, string>>({});
+const translatedProhibitionsContent = ref<Record<number, string>>({});
+const translatedShippingContent = ref<Record<number, { content?: string; title?: string; description?: string }>>({});
+const translatedAcknowledgmentContent = ref<Record<string, string>>({});
+const translatedRisksTitle = ref<string>('');
+const translatedProhibitionsTitle = ref<string>('');
+const translatedMainTitle = ref<string>('');
+
+// Translate dynamic content
+const translateDynamicContent = async () => {
+    // Translate main title
+    const mainTitle = getContent('risks_prohibitions', 'title');
+    if (mainTitle?.title) {
+        try {
+            translatedMainTitle.value = await translateText(mainTitle.title, language.value, 'auto');
+        } catch (error) {
+            translatedMainTitle.value = mainTitle.title;
+        }
+    }
+    
+    // Translate risks section title
+    const risksTitleItem = risksContent.value.find(c => c.title && c.title.includes('Risks'));
+    if (risksTitleItem?.title) {
+        try {
+            translatedRisksTitle.value = await translateText(risksTitleItem.title, language.value, 'auto');
+        } catch (error) {
+            translatedRisksTitle.value = risksTitleItem.title;
+        }
+    }
+    
+    // Translate prohibitions section title
+    const prohibitionsTitleItem = prohibitionsContent.value.find(c => c.title && c.title.includes('Prohibitions'));
+    if (prohibitionsTitleItem?.title) {
+        try {
+            translatedProhibitionsTitle.value = await translateText(prohibitionsTitleItem.title, language.value, 'auto');
+        } catch (error) {
+            translatedProhibitionsTitle.value = prohibitionsTitleItem.title;
+        }
+    }
+    
+    // Translate risks content
+    for (const risk of risksContent.value) {
+        if (risk.content) {
+            try {
+                translatedRisksContent.value[risk.id] = await translateText(risk.content, language.value, 'auto');
+            } catch (error) {
+                translatedRisksContent.value[risk.id] = risk.content;
+            }
+        }
+    }
+    
+    // Translate prohibitions content
+    for (const prohibition of prohibitionsContent.value) {
+        if (prohibition.content) {
+            try {
+                translatedProhibitionsContent.value[prohibition.id] = await translateText(prohibition.content, language.value, 'auto');
+            } catch (error) {
+                translatedProhibitionsContent.value[prohibition.id] = prohibition.content;
+            }
+        }
+    }
+    
+    // Translate shipping content
+    for (const item of shippingContent.value) {
+        if (!translatedShippingContent.value[item.id]) {
+            translatedShippingContent.value[item.id] = {};
+        }
+        if (item.content) {
+            try {
+                translatedShippingContent.value[item.id].content = await translateText(item.content, language.value, 'auto');
+            } catch (error) {
+                translatedShippingContent.value[item.id].content = item.content;
+            }
+        }
+        if (item.title) {
+            try {
+                translatedShippingContent.value[item.id].title = await translateText(item.title, language.value, 'auto');
+            } catch (error) {
+                translatedShippingContent.value[item.id].title = item.title;
+            }
+        }
+        if (item.description) {
+            try {
+                translatedShippingContent.value[item.id].description = await translateText(item.description, language.value, 'auto');
+            } catch (error) {
+                translatedShippingContent.value[item.id].description = item.description;
+            }
+        }
+    }
+    
+    // Translate acknowledgment content
+    const riskAck = getContent('risks_prohibitions', 'risk_acknowledgment');
+    if (riskAck?.content) {
+        try {
+            translatedAcknowledgmentContent.value['risk_acknowledgment'] = await translateText(riskAck.content, language.value, 'auto');
+        } catch (error) {
+            translatedAcknowledgmentContent.value['risk_acknowledgment'] = riskAck.content;
+        }
+    }
+    
+    const resaleProhibited = getContent('risks_prohibitions', 'resale_prohibited');
+    if (resaleProhibited?.content) {
+        try {
+            translatedAcknowledgmentContent.value['resale_prohibited'] = await translateText(resaleProhibited.content, language.value, 'auto');
+        } catch (error) {
+            translatedAcknowledgmentContent.value['resale_prohibited'] = resaleProhibited.content;
+        }
+    }
+};
+
+watch([language, () => props.contents], translateDynamicContent, { immediate: true, deep: true });
+onMounted(translateDynamicContent);
 
 const countries = [
     { code: 'AF', name: 'Afghanistan' },
@@ -332,9 +588,9 @@ const getQuantityLabel = (item: any) => {
     const variant = parseVariant(item);
     if (variant && variant.type === 'bottle' && variant.bottles) {
         const bottles = variant.bottles;
-        return `Quantity: ${bottles} ${bottles === 1 ? 'bottle' : 'bottles'}`;
+        return `${translated.value.quantity || texts.value.quantity} ${bottles} ${bottles === 1 ? (translated.value.bottle || texts.value.bottle) : (translated.value.bottles || texts.value.bottles)}`;
     }
-    return `Quantity: ${item.quantity || 1}`;
+    return `${translated.value.quantity || texts.value.quantity} ${item.quantity || 1}`;
 };
 
 // Get tier information for display (if applicable)
@@ -343,7 +599,7 @@ const getTierInfo = (item: any): string | null => {
     if (variant && variant.type === 'bottle' && variant.tier) {
         const tier = variant.tier;
         if (tier.capsules) {
-            return `${tier.capsules} capsules per bottle`;
+            return `${tier.capsules} ${translated.value.capsulesPerBottle || texts.value.capsulesPerBottle}`;
         }
     }
     return null;
@@ -626,7 +882,7 @@ const submit = () => {
         <PublicNav />
         <div class="py-8">
         <div class="container mx-auto px-4 max-w-4xl">
-            <h1 class="text-3xl font-bold text-gray-900 mb-8">Checkout</h1>
+            <h1 class="text-3xl font-bold text-gray-900 mb-8">{{ translated.checkout || texts.checkout }}</h1>
             
             <!-- Progress Steps -->
             <div class="mb-8">
@@ -652,11 +908,11 @@ const submit = () => {
                             ></div>
                         </div>
                         <div class="mt-2 text-xs text-center text-gray-600">
-                            <span v-if="step === 1">Confirm Amount</span>
-                            <span v-else-if="step === 2">Customer Info</span>
-                            <span v-else-if="step === 3">Shipping</span>
-                            <span v-else-if="step === 4">Risks</span>
-                            <span v-else-if="step === 5">Review</span>
+                            <span v-if="step === 1">{{ translated.confirmAmount || texts.confirmAmount }}</span>
+                            <span v-else-if="step === 2">{{ translated.customerInfo || texts.customerInfo }}</span>
+                            <span v-else-if="step === 3">{{ translated.shipping || texts.shipping }}</span>
+                            <span v-else-if="step === 4">{{ translated.risks || texts.risks }}</span>
+                            <span v-else-if="step === 5">{{ translated.review || texts.review }}</span>
                         </div>
                     </div>
                 </div>
@@ -671,7 +927,7 @@ const submit = () => {
                     <AlertTriangle class="w-5 h-5 text-red-600 mt-0.5 mr-3 flex-shrink-0" />
                     <div>
                         <h3 class="text-sm font-semibold text-red-800 mb-1">
-                            Please fix the following errors:
+                            {{ translated.pleaseFixErrors || texts.pleaseFixErrors }}
                         </h3>
                         <ul class="list-disc list-inside text-sm text-red-700 space-y-1">
                             <li v-for="(error, field) in errors" :key="field">
@@ -690,10 +946,10 @@ const submit = () => {
                 >
                     <h2 class="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
                         <ShoppingCart class="w-6 h-6" />
-                        Confirm Amount
+                        {{ translated.confirmAmount || texts.confirmAmount }}
                     </h2>
                     <p class="text-gray-600 mb-6">
-                        Please review your cart items and amounts before proceeding.
+                        {{ translated.pleaseReviewCart || texts.pleaseReviewCart }}
                     </p>
                     
                     <!-- Cart Items -->
@@ -719,7 +975,7 @@ const submit = () => {
                                     {{ getQuantityLabel(item) }} × {{ formatPrice(getItemPrice(item)) }}
                                 </p>
                                 <p v-if="getTierInfo(item)" class="text-xs text-gray-500 mt-1">
-                                    Tier: {{ getTierInfo(item) }}
+                                    {{ translated.tier || texts.tier }} {{ getTierInfo(item) }}
                                 </p>
                             </div>
                             <div class="text-right">
@@ -732,22 +988,22 @@ const submit = () => {
 
                     <!-- Order Summary -->
                     <div class="bg-gray-50 border border-gray-200 rounded-lg p-6">
-                        <h3 class="font-semibold text-gray-900 mb-4">Order Summary</h3>
+                        <h3 class="font-semibold text-gray-900 mb-4">{{ translated.orderSummary || texts.orderSummary }}</h3>
                         <div class="space-y-2 text-sm">
                             <div class="flex justify-between text-gray-600">
-                                <span>Subtotal:</span>
+                                <span>{{ translated.subtotal || texts.subtotal }}</span>
                                 <span>{{ formatPrice(subtotal) }}</span>
                             </div>
                             <div v-if="tax > 0" class="flex justify-between text-gray-600">
-                                <span>Tax (included):</span>
+                                <span>{{ translated.taxIncluded || texts.taxIncluded }}</span>
                                 <span>{{ formatPrice(tax) }}</span>
                             </div>
                             <div class="flex justify-between text-gray-600">
-                                <span>Shipping:</span>
-                                <span>{{ shipping === 0 ? 'Free' : formatPrice(shipping) }}</span>
+                                <span>{{ translated.shippingLabel || texts.shippingLabel }}</span>
+                                <span>{{ shipping === 0 ? (translated.free || texts.free) : formatPrice(shipping) }}</span>
                             </div>
                             <div class="border-t pt-2 mt-2 flex justify-between text-lg font-bold text-gray-900">
-                                <span>Total:</span>
+                                <span>{{ translated.total || texts.total }}</span>
                                 <span>{{ formatPrice(total) }}</span>
                             </div>
                         </div>
@@ -755,7 +1011,7 @@ const submit = () => {
 
                     <div class="mt-6 bg-blue-50 border-l-4 border-blue-500 p-4 rounded">
                         <p class="text-sm text-gray-700">
-                            You can modify quantities in your <Link href="/cart" class="text-blue-600 hover:underline">cart</Link> before proceeding to checkout.
+                            {{ translated.modifyQuantities || texts.modifyQuantities }} <Link href="/cart" class="text-blue-600 hover:underline">{{ translated.cart || texts.cart }}</Link> {{ translated.beforeCheckout || texts.beforeCheckout }}
                         </p>
                     </div>
                 </div>
@@ -767,13 +1023,13 @@ const submit = () => {
                 >
                     <h2 class="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
                         <FileText class="w-6 h-6" />
-                        Customer Information & Health Check Sheet
+                        {{ translated.customerInformation || texts.customerInformation }}
                     </h2>
                     
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">
-                                Email *
+                                {{ translated.email || texts.email }} *
                             </label>
                             <input
                                 v-model="form.email"
@@ -792,7 +1048,7 @@ const submit = () => {
                         
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">
-                                Phone *
+                                {{ translated.phone || texts.phone }} *
                             </label>
                             <input
                                 v-model="form.phone"
@@ -811,7 +1067,7 @@ const submit = () => {
                         
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">
-                                First Name *
+                                {{ translated.firstName || texts.firstName }} *
                             </label>
                             <input
                                 v-model="form.first_name"
@@ -830,7 +1086,7 @@ const submit = () => {
                         
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">
-                                Last Name *
+                                {{ translated.lastName || texts.lastName }} *
                             </label>
                             <input
                                 v-model="form.last_name"
@@ -851,16 +1107,16 @@ const submit = () => {
                     <!-- Health Check Sheet -->
                     <div class="border-t pt-6 mt-6">
                         <h3 class="text-lg font-semibold text-gray-900 mb-4">
-                            Health Check Sheet
+                            {{ translated.healthCheckSheet || texts.healthCheckSheet }}
                         </h3>
                         <p class="text-sm text-gray-600 mb-4">
-                            This information helps the manufacturing doctor provide minimal advice based on your health information.
+                            {{ translated.healthCheckDescription || texts.healthCheckDescription }}
                         </p>
                         
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2">
-                                    Age *
+                                    {{ translated.age || texts.age }} *
                                 </label>
                                 <input
                                     v-model="form.health_check.age"
@@ -873,7 +1129,7 @@ const submit = () => {
                             
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2">
-                                    Weight (kg) *
+                                    {{ translated.weight || texts.weight }} *
                                 </label>
                                 <input
                                     v-model="form.health_check.weight"
@@ -887,7 +1143,7 @@ const submit = () => {
                             
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2">
-                                    Height (cm)
+                                    {{ translated.height || texts.height }}
                                 </label>
                                 <input
                                     v-model="form.health_check.height"
@@ -899,65 +1155,65 @@ const submit = () => {
                             
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2">
-                                    Pregnancy Status
+                                    {{ translated.pregnancyStatus || texts.pregnancyStatus }}
                                 </label>
                                 <select
                                     v-model="form.health_check.pregnancy_status"
                                     class="w-full border border-gray-300 rounded-lg px-4 py-2 text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900"
                                 >
-                                    <option value="">Select...</option>
-                                    <option value="not_applicable">Not Applicable</option>
-                                    <option value="not_pregnant">Not Pregnant</option>
-                                    <option value="pregnant">Pregnant</option>
-                                    <option value="breastfeeding">Breastfeeding</option>
+                                    <option value="">{{ translated.select || texts.select }}</option>
+                                    <option value="not_applicable">{{ translated.notApplicable || texts.notApplicable }}</option>
+                                    <option value="not_pregnant">{{ translated.notPregnant || texts.notPregnant }}</option>
+                                    <option value="pregnant">{{ translated.pregnant || texts.pregnant }}</option>
+                                    <option value="breastfeeding">{{ translated.breastfeeding || texts.breastfeeding }}</option>
                                 </select>
                             </div>
                             
                             <div class="md:col-span-2">
                                 <label class="block text-sm font-medium text-gray-700 mb-2">
-                                    Current Medications
+                                    {{ translated.currentMedications || texts.currentMedications }}
                                 </label>
                                 <textarea
                                     v-model="form.health_check.current_medications"
                                     rows="3"
                                     class="w-full border border-gray-300 rounded-lg px-4 py-2 text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900"
-                                    placeholder="List any medications you are currently taking"
+                                    :placeholder="translated.currentMedicationsPlaceholder || texts.currentMedicationsPlaceholder"
                                 ></textarea>
                             </div>
                             
                             <div class="md:col-span-2">
                                 <label class="block text-sm font-medium text-gray-700 mb-2">
-                                    Allergies
+                                    {{ translated.allergies || texts.allergies }}
                                 </label>
                                 <textarea
                                     v-model="form.health_check.allergies"
                                     rows="2"
                                     class="w-full border border-gray-300 rounded-lg px-4 py-2 text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900"
-                                    placeholder="List any known allergies"
+                                    :placeholder="translated.allergiesPlaceholder || texts.allergiesPlaceholder"
                                 ></textarea>
                             </div>
                             
                             <div class="md:col-span-2">
                                 <label class="block text-sm font-medium text-gray-700 mb-2">
-                                    Medical Conditions
+                                    {{ translated.medicalConditions || texts.medicalConditions }}
                                 </label>
                                 <textarea
                                     v-model="form.health_check.medical_conditions"
                                     rows="3"
                                     class="w-full border border-gray-300 rounded-lg px-4 py-2 text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900"
-                                    placeholder="List any medical conditions"
+                                    :placeholder="translated.medicalConditionsPlaceholder || texts.medicalConditionsPlaceholder"
                                 ></textarea>
                             </div>
                             
                             <div class="md:col-span-2">
                                 <label class="block text-sm font-medium text-gray-700 mb-2">
-                                    Reason for Use
+                                    {{ translated.reasonForUse || texts.reasonForUse }}
                                 </label>
                                 <textarea
                                     v-model="form.health_check.reason_for_use"
                                     rows="3"
                                     class="w-full border border-gray-300 rounded-lg px-4 py-2 text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900"
-                                    placeholder="Please describe your reason for using Ivermectin"
+                                    :placeholder="translated.reasonForUsePlaceholder || texts.reasonForUsePlaceholder"
                                 ></textarea>
                             </div>
                             
@@ -969,7 +1225,7 @@ const submit = () => {
                                         class="rounded"
                                     />
                                     <span class="text-sm text-gray-700">
-                                        Have you used Ivermectin before?
+                                        {{ translated.previousIvermectinUse || texts.previousIvermectinUse }}
                                     </span>
                                 </label>
                             </div>
@@ -983,13 +1239,13 @@ const submit = () => {
                     class="bg-white rounded-lg shadow-md p-6 mb-6"
                 >
                     <h2 class="text-xl font-bold text-gray-900 mb-6">
-                        Shipping Address
+                        {{ translated.shipping || texts.shipping }} {{ translated.addressLine1 || texts.addressLine1 }}
                     </h2>
                     
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div class="md:col-span-2">
                             <label class="block text-sm font-medium text-gray-700 mb-2">
-                                Address Line 1 *
+                                {{ translated.addressLine1 || texts.addressLine1 }} *
                             </label>
                             <input
                                 v-model="form.address_line_1"
@@ -1008,7 +1264,7 @@ const submit = () => {
                         
                         <div class="md:col-span-2">
                             <label class="block text-sm font-medium text-gray-700 mb-2">
-                                Address Line 2
+                                {{ translated.addressLine2 || texts.addressLine2 }}
                             </label>
                             <input
                                 v-model="form.address_line_2"
@@ -1019,7 +1275,7 @@ const submit = () => {
                         
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">
-                                City *
+                                {{ translated.city || texts.city }} *
                             </label>
                             <input
                                 v-model="form.city"
@@ -1038,7 +1294,7 @@ const submit = () => {
                         
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">
-                                State/Prefecture *
+                                {{ translated.state || texts.state }} *
                             </label>
                             <input
                                 v-model="form.state"
@@ -1057,7 +1313,7 @@ const submit = () => {
                         
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">
-                                Postal Code *
+                                {{ translated.postalCode || texts.postalCode }} *
                             </label>
                             <input
                                 v-model="form.postal_code"
@@ -1076,7 +1332,7 @@ const submit = () => {
                         
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">
-                                Country *
+                                {{ translated.country || texts.country }} *
                             </label>
                             <select
                                 v-model="form.country"
@@ -1111,30 +1367,38 @@ const submit = () => {
                     <div class="bg-red-50 border-l-4 border-red-500 rounded-lg p-6">
                         <h2 class="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
                             <AlertTriangle class="w-6 h-6 text-red-600" />
-                            Risks & Prohibitions
+                            {{ translatedMainTitle || getContent('risks_prohibitions', 'title')?.title || (translated.risksAndProhibitions || texts.risksAndProhibitions) }}
                         </h2>
                         
                         <div class="space-y-4 mb-6">
-                            <div>
-                                <h3 class="font-semibold text-gray-900 mb-2">Risks:</h3>
+                            <!-- Risks Section -->
+                            <div v-if="risksContent.length > 0">
+                                <h3 class="font-semibold text-gray-900 mb-2">
+                                    {{ translatedRisksTitle || risksContent.find(c => c.title && c.title.includes('Risks'))?.title || (translated.risksLabel || texts.risksLabel) }}
+                                </h3>
                                 <ul class="list-disc list-inside space-y-1 text-gray-700">
-                                    <li>Potential for wrong medication</li>
-                                    <li>Incorrect dosage without a doctor</li>
-                                    <li>Customs delays</li>
+                                    <li v-for="risk in risksContent.filter(c => c.content)" :key="risk.id">
+                                        {{ translatedRisksContent[risk.id] || risk.content }}
+                                    </li>
                                 </ul>
                             </div>
                             
-                            <div>
-                                <h3 class="font-semibold text-gray-900 mb-2">Prohibitions:</h3>
+                            <!-- Prohibitions Section -->
+                            <div v-if="prohibitionsContent.length > 0">
+                                <h3 class="font-semibold text-gray-900 mb-2">
+                                    {{ translatedProhibitionsTitle || prohibitionsContent.find(c => c.title && c.title.includes('Prohibitions'))?.title || (translated.prohibitionsLabel || texts.prohibitionsLabel) }}
+                                </h3>
                                 <ul class="list-disc list-inside space-y-1 text-gray-700">
-                                    <li>Resale or transfer to third parties is strictly prohibited</li>
-                                    <li>Exception: Doctors with proper "Yakkan Shoumei" permits can prescribe to others</li>
+                                    <li v-for="prohibition in prohibitionsContent.filter(c => c.content)" :key="prohibition.id">
+                                        {{ translatedProhibitionsContent[prohibition.id] || prohibition.content }}
+                                    </li>
                                 </ul>
                             </div>
                         </div>
                         
                         <div class="space-y-3">
-                            <label class="flex items-start gap-3 cursor-pointer">
+                            <!-- Risk Acknowledgment Checkbox -->
+                            <label v-if="getContent('risks_prohibitions', 'risk_acknowledgment')" class="flex items-start gap-3 cursor-pointer">
                                 <input
                                     v-model="form.risk_acknowledged"
                                     type="checkbox"
@@ -1148,14 +1412,15 @@ const submit = () => {
                                     false-value="0"
                                 />
                                 <span class="text-sm text-gray-700">
-                                    I acknowledge the risks of self-medication and understand that I am responsible for my personal import. *
+                                    {{ translatedAcknowledgmentContent['risk_acknowledgment'] || getContent('risks_prohibitions', 'risk_acknowledgment')?.content || (translated.riskAcknowledgmentDefault || texts.riskAcknowledgmentDefault) }}
                                 </span>
                             </label>
                             <p v-if="errors.risk_acknowledged" class="text-sm text-red-600 ml-7">
                                 {{ errors.risk_acknowledged }}
                             </p>
                             
-                            <label class="flex items-start gap-3 cursor-pointer">
+                            <!-- Resale Prohibited Checkbox -->
+                            <label v-if="getContent('risks_prohibitions', 'resale_prohibited')" class="flex items-start gap-3 cursor-pointer">
                                 <input
                                     v-model="form.resale_prohibited"
                                     type="checkbox"
@@ -1169,7 +1434,7 @@ const submit = () => {
                                     false-value="0"
                                 />
                                 <span class="text-sm text-gray-700">
-                                    I understand that resale or transfer to third parties is strictly prohibited. *
+                                    {{ translatedAcknowledgmentContent['resale_prohibited'] || getContent('risks_prohibitions', 'resale_prohibited')?.content || (translated.resaleProhibitedDefault || texts.resaleProhibitedDefault) }}
                                 </span>
                             </label>
                             <p v-if="errors.resale_prohibited" class="text-sm text-red-600 ml-7">
@@ -1188,7 +1453,7 @@ const submit = () => {
                     <!-- Order Summary -->
                     <div class="bg-white rounded-lg shadow-md p-6">
                         <h2 class="text-xl font-bold text-gray-900 mb-6">
-                            Order Summary
+                            {{ translated.orderSummary || texts.orderSummary }}
                         </h2>
                         
                         <!-- Cart Items -->
@@ -1214,7 +1479,7 @@ const submit = () => {
                                         {{ getQuantityLabel(item) }} × {{ formatPrice(getItemPrice(item)) }}
                                     </p>
                                     <p v-if="getTierInfo(item)" class="text-xs text-gray-500 mt-1">
-                                        Tier: {{ getTierInfo(item) }}
+                                        {{ translated.tier || texts.tier }} {{ getTierInfo(item) }}
                                     </p>
                                 </div>
                                 <div class="text-right">
@@ -1227,19 +1492,19 @@ const submit = () => {
 
                         <div class="border-t pt-4 space-y-2 text-sm">
                             <div class="flex justify-between text-gray-600">
-                                <span>Subtotal:</span>
+                                <span>{{ translated.subtotal || texts.subtotal }}</span>
                                 <span>{{ formatPrice(subtotal) }}</span>
                             </div>
                             <div v-if="tax > 0" class="flex justify-between text-gray-600">
-                                <span>Tax (included):</span>
+                                <span>{{ translated.taxIncluded || texts.taxIncluded }}</span>
                                 <span>{{ formatPrice(tax) }}</span>
                             </div>
                             <div class="flex justify-between text-gray-600">
-                                <span>Shipping:</span>
-                                <span>{{ shipping === 0 ? 'Free' : formatPrice(shipping) }}</span>
+                                <span>{{ translated.shippingLabel || texts.shippingLabel }}</span>
+                                <span>{{ shipping === 0 ? (translated.free || texts.free) : formatPrice(shipping) }}</span>
                             </div>
                             <div class="border-t pt-2 mt-2 flex justify-between text-lg font-bold text-gray-900">
-                                <span>Total:</span>
+                                <span>{{ translated.total || texts.total }}</span>
                                 <span>{{ formatPrice(total) }}</span>
                             </div>
                         </div>
@@ -1248,7 +1513,7 @@ const submit = () => {
                     <!-- Shipping Address Summary -->
                     <div class="bg-white rounded-lg shadow-md p-6">
                         <h2 class="text-xl font-bold text-gray-900 mb-4">
-                            Shipping Address
+                            {{ translated.shippingAddress || texts.shippingAddress }}
                         </h2>
                         <div class="text-gray-700">
                             <p class="font-semibold">{{ form.first_name }} {{ form.last_name }}</p>
@@ -1256,31 +1521,20 @@ const submit = () => {
                             <p v-if="form.address_line_2">{{ form.address_line_2 }}</p>
                             <p>{{ form.city }}, {{ form.state }} {{ form.postal_code }}</p>
                             <p>{{ form.country }}</p>
-                            <p class="mt-2">Phone: {{ form.phone }}</p>
-                            <p>Email: {{ form.email }}</p>
+                            <p class="mt-2">{{ translated.phoneLabel || texts.phoneLabel }} {{ form.phone }}</p>
+                            <p>{{ translated.emailLabel || texts.emailLabel }} {{ form.email }}</p>
                         </div>
                     </div>
 
                     <!-- Shipping & Customs Information -->
-                    <div class="bg-blue-50 border-l-4 border-blue-500 rounded-lg p-6">
+                    <div v-if="shippingContent.length > 0" class="bg-blue-50 border-l-4 border-blue-500 rounded-lg p-6">
                         <h2 class="text-xl font-bold text-gray-900 mb-4">
-                            Shipping & Customs Information
+                            {{ translatedShippingContent[shippingContent.find(c => c.title)?.id || 0]?.title || shippingContent.find(c => c.title)?.title || (translated.shippingAndCustoms || texts.shippingAndCustoms) }}
                         </h2>
                         <div class="space-y-4 text-gray-700">
-                            <div>
-                                <p class="mb-2">
-                                    Upon confirmation of your bank transfer, we will immediately translate your Health Check Sheet into English and submit it to Dr. Landrito in the Philippines to begin the shipping process. Please allow 8 to 16 days for arrival.
-                                </p>
-                            </div>
-                            <div>
-                                <p class="mb-2">
-                                    After shipping from the Philippines, the package will typically be delivered directly to your home. In rare cases, customs may contact you. Please state that it is for "personal use". Personal import of medicine is legal under Article 12 of the PMDA Act. If customs requests any documentation, please contact us. We will prepare the necessary documents at our expense.
-                                </p>
-                            </div>
-                            <div>
-                                <p>
-                                    Please note that you may be required by Japanese customs to pay an additional import tax (approx. 5% of the total amount paid). This tax is the responsibility of the recipient.
-                                </p>
+                            <div v-for="item in shippingContent" :key="item.id">
+                                <p v-if="item.content" class="mb-2 whitespace-pre-line">{{ translatedShippingContent[item.id]?.content || item.content }}</p>
+                                <p v-if="item.description" class="text-sm text-gray-600 whitespace-pre-line">{{ translatedShippingContent[item.id]?.description || item.description }}</p>
                             </div>
                         </div>
                     </div>
@@ -1288,7 +1542,7 @@ const submit = () => {
                     <!-- Payment Method -->
                     <div class="bg-white rounded-lg shadow-md p-6">
                         <h2 class="text-xl font-bold text-gray-900 mb-4">
-                            Payment Method
+                            {{ translated.paymentMethod || texts.paymentMethod }}
                         </h2>
                         <div class="space-y-3">
                             <label class="flex items-start gap-3 p-4 border-2 rounded-lg cursor-pointer transition-colors"
@@ -1301,35 +1555,20 @@ const submit = () => {
                                     class="mt-1"
                                 />
                                 <div class="flex-1">
-                                    <div class="font-semibold text-gray-900">Bank Transfer</div>
+                                    <div class="font-semibold text-gray-900">{{ translated.bankTransfer || texts.bankTransfer }}</div>
                                     <p class="text-sm text-gray-600 mt-1">
-                                        Transfer funds directly to our bank account. You will receive payment instructions after confirming your order.
+                                        {{ translated.bankTransferDescription || texts.bankTransferDescription }}
                                     </p>
                                 </div>
                             </label>
                             
-                            <label class="flex items-start gap-3 p-4 border-2 rounded-lg cursor-pointer transition-colors"
-                                :class="form.payment_method === 'credit_card' ? 'border-gray-900 bg-gray-50' : errors.payment_method ? 'border-red-500' : 'border-gray-200 hover:border-gray-300'">
-                                <input
-                                    v-model="form.payment_method"
-                                    type="radio"
-                                    value="credit_card"
-                                    @change="delete errors.payment_method"
-                                    class="mt-1"
-                                />
-                                <div class="flex-1">
-                                    <div class="font-semibold text-gray-900">Credit Card</div>
-                                    <p class="text-sm text-gray-600 mt-1">
-                                        Pay securely with your credit card. You will be redirected to our secure payment gateway.
-                                    </p>
-                                </div>
-                            </label>
+                            <!-- Credit Card option hidden -->
                         </div>
                         <p v-if="errors.payment_method" class="text-sm text-red-600 mt-2">
                             {{ errors.payment_method }}
                         </p>
                         <p class="text-sm text-gray-600 mt-4">
-                            Payment instructions will be provided after order confirmation.
+                            {{ translated.paymentInstructions || texts.paymentInstructions }}
                         </p>
                     </div>
                 </div>
@@ -1342,7 +1581,7 @@ const submit = () => {
                         @click="prevStep"
                         class="bg-white border border-gray-300 text-gray-700 px-6 py-3 rounded-lg font-semibold hover:bg-gray-50 transition"
                     >
-                        Previous
+                        {{ translated.back || texts.back }}
                     </button>
                     <div v-else></div>
                     
@@ -1353,7 +1592,7 @@ const submit = () => {
                             @click="nextStep"
                             class="bg-gray-900 text-white px-8 py-3 rounded-lg font-semibold hover:bg-gray-800 transition uppercase tracking-wide"
                         >
-                            Next Step
+                            {{ translated.next || texts.next }}
                         </button>
                         <button
                             v-else
@@ -1362,7 +1601,7 @@ const submit = () => {
                             class="bg-gray-900 text-white px-8 py-3 rounded-lg font-semibold hover:bg-gray-800 transition disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-2 uppercase tracking-wide"
                         >
                             <CheckCircle class="w-5 h-5" />
-                            Confirm Order
+                            {{ translated.placeOrder || texts.placeOrder }}
                         </button>
                     </div>
                 </div>
